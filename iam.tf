@@ -80,3 +80,45 @@ resource "google_storage_bucket_iam_member" "sie_gcs_access" {
   role   = "roles/storage.objectViewer"
   member = "serviceAccount:${google_service_account.sie_workload[0].email}"
 }
+
+# =============================================================================
+# NATS Config Store (GCS persistence for config distribution)
+# =============================================================================
+
+# GCS bucket for config store persistence (NATS config distribution)
+resource "google_storage_bucket" "config_store" {
+  count = var.nats_config_store_bucket != "" ? 1 : 0
+
+  project  = var.project_id
+  name     = var.nats_config_store_bucket
+  location = var.region
+
+  uniform_bucket_level_access = true
+  public_access_prevention    = "enforced"
+  force_destroy               = false
+
+  versioning {
+    enabled = true
+  }
+
+  lifecycle_rule {
+    action {
+      type = "Delete"
+    }
+    condition {
+      num_newer_versions = 3 # Keep at most 3 versions; delete older noncurrent ones
+      with_state         = "ARCHIVED"
+    }
+  }
+
+  labels = local.resource_labels
+}
+
+# Config store bucket access (read + write for CAS operations)
+resource "google_storage_bucket_iam_member" "config_store_access" {
+  count = var.enable_workload_identity && var.nats_config_store_bucket != "" ? 1 : 0
+
+  bucket = google_storage_bucket.config_store[0].name
+  role   = "roles/storage.objectAdmin"
+  member = "serviceAccount:${google_service_account.sie_workload[0].email}"
+}

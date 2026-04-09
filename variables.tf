@@ -251,6 +251,16 @@ variable "gcs_bucket_name" {
 }
 
 # =============================================================================
+# NATS Config Distribution
+# =============================================================================
+
+variable "nats_config_store_bucket" {
+  description = "GCS bucket name for NATS config store persistence (empty = no bucket created)"
+  type        = string
+  default     = ""
+}
+
+# =============================================================================
 # Artifact Registry
 # =============================================================================
 

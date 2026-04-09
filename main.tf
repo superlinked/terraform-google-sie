@@ -1,7 +1,7 @@
 # SIE GKE Cluster - Infrastructure Module
 #
 # GCP-only resources: VPC, GKE cluster, node pools, service accounts, IAM, Artifact Registry.
-# Does NOT include kubernetes or helm providers - those are in the k8s module.
+# Does NOT include kubernetes or helm providers - those are deployed via Helm.
 #
 # This module can be applied independently without a running cluster.
 
