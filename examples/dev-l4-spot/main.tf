@@ -82,7 +82,7 @@ variable "deployer_service_account" {
 
 module "infra" {
   source  = "superlinked/sie/google"
-  version = "0.1.10"
+  version = "0.2.0"
 
   project_id               = var.project_id
   region                   = var.region
