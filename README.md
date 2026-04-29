@@ -1,11 +1,10 @@
 # SIE GKE Terraform Module
 
-One command to get a GPU-ready GKE cluster for [SIE](https://github.com/superlinked/sie) (Search Inference Engine). The module creates everything you need — VPC, GKE, GPU node pools, container registry, observability — so you can focus on running inference, not managing infrastructure.
+One command to get a GPU-ready GKE cluster for [SIE](https://github.com/superlinked/sie) (Search Inference Engine). The module creates the underlying GCP resources (VPC, GKE, GPU node pools, Artifact Registry, IAM, optional model-cache GCS bucket); the SIE application itself — gateway, sie-config, workers, KEDA, Prometheus, Grafana, Loki, NATS — is deployed on top via the [sie-cluster Helm chart](../../helm/sie-cluster/).
 
-- GPU node pools with KEDA autoscaling (scale-to-zero)
-- Prometheus/Grafana observability stack
+- GPU node pools sized for scale-to-zero via KEDA (configured in the Helm chart)
+- Artifact Registry with cleanup policies
 - Workload Identity for GCS access
-- NATS-based config distribution for runtime model management
 
 ## What you get
 
@@ -15,21 +14,17 @@ One command to get a GPU-ready GKE cluster for [SIE](https://github.com/superlin
 - **Node Auto-Provisioning (NAP)** — GKE automatically creates node pools to fit pending workloads
 - **Artifact Registry** — private Docker registry with automatic cleanup policies for dev images
 - **Workload Identity** — pods authenticate to GCP without service account keys
-- **Observability-ready** — outputs for Prometheus, Grafana, and KEDA integration via the SIE Helm chart
-- **Optional SIE application** — deploy the full SIE stack (router, workers, KEDA, Prometheus) via Helm
-- **Optional NATS config distribution** — runtime model management with persistent config store (GCS-backed)
-- **Optional ingress + auth** — ingress-nginx with oauth2-proxy or static token auth
+- **Observability-ready** — outputs wired for the Helm chart's Prometheus, Grafana, Loki, and KEDA integration
+- **Paired with the sie-cluster Helm chart** — Kubernetes workloads (gateway, sie-config, workers, NATS, ingress, auth) are installed on top of this cluster via Helm
 
 ## Module structure
 
-The Terraform code is split into two layers:
-
 | Layer | Path | What it creates |
 |-------|------|-----------------|
-| **Infrastructure** | `infra/` | GCP resources only: VPC, GKE cluster, node pools, IAM, Artifact Registry, GCS buckets. Can be applied without a running cluster. |
-| **Application** | Root module + Helm chart | Kubernetes resources: KEDA, Prometheus, Grafana, Loki, SIE router/workers, NATS. Requires a running cluster. |
+| **Infrastructure** | `infra/` | GCP resources only: VPC, GKE cluster, node pools, IAM, Artifact Registry, optional model-cache GCS bucket. Can be applied without a running cluster. |
+| **Application** | [sie-cluster Helm chart](../../helm/sie-cluster/) | Kubernetes resources: sie-config, gateway, workers, NATS, KEDA, Prometheus, Grafana, Loki, optional ingress + oauth2-proxy. Applied after the cluster is up. |
 
-Examples in `examples/` use the `infra/` submodule directly and deploy K8s resources via the [sie-cluster Helm chart](../../helm/sie-cluster/).
+Examples in `examples/` use the `infra/` submodule directly and deploy K8s resources via the Helm chart in a follow-up step.
 
 ## Quick start
 
@@ -47,7 +42,7 @@ After apply, configure kubectl and deploy SIE via the Helm chart:
 # Point kubectl at the new cluster
 $(terraform output -raw kubectl_command)
 
-# Deploy SIE (router, workers, KEDA, Prometheus, Grafana)
+# Deploy SIE (gateway, workers, KEDA, Prometheus, Grafana)
 helm upgrade --install sie-cluster ../../deploy/helm/sie-cluster \
   -f ../../deploy/helm/sie-cluster/values-gke.yaml \
   --create-namespace -n sie \
@@ -158,103 +153,9 @@ Each entry in `gpu_node_pools` supports:
 | `nap_max_cpu` | `1000` | Maximum CPU cores NAP can provision |
 | `nap_max_memory_gb` | `4000` | Maximum memory NAP can provision |
 
-### SIE application
+### Application layer
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `install_sie` | `true` | Install SIE via the Helm chart |
-| `sie_bundle` | `default` | Server bundle (deprecated: use `sie_bundles`) |
-| `sie_bundles` | `[]` | List of bundles to deploy (creates worker pools per gpu x bundle) |
-| `sie_router_replicas` | `2` | Router replicas for HA |
-| `sie_router_service_type` | `ClusterIP` | `ClusterIP` or `LoadBalancer` |
-| `sie_autoscaling_cooldown` | `600` | Seconds before KEDA scales to zero |
-| `sie_hf_token` | `""` | HuggingFace token for gated models (sensitive) |
-| `sie_server_image` | `ghcr.io/superlinked/sie-server` | Server Docker image |
-| `sie_router_image` | `ghcr.io/superlinked/sie-router` | Router Docker image |
-| `sie_image_tag` | `""` | Server image tag (defaults to Chart appVersion) |
-| `sie_cache_volume_size` | `50Gi` | Persistent volume size for model cache |
-
-### NATS config distribution
-
-NATS enables runtime model management — add, remove, and update models via the router API without redeploying. The config store persists API-added models so they survive router restarts.
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `nats_enabled` | `false` | Enable NATS-based config distribution |
-| `nats_install` | `true` | Deploy NATS server as a sub-chart (set `false` for external NATS) |
-| `nats_url` | `""` | External NATS server URL (required when `nats_install=false`) |
-| `nats_config_store_bucket` | `""` | GCS bucket name for config persistence (creates bucket + IAM automatically) |
-| `nats_config_store_dir` | `/tmp/sie-config-store` | Config store path (overridden when `nats_config_store_bucket` is set) |
-| `nats_config_restore` | `false` | Restore API-added models from config store on router startup |
-
-**Enable persistent config distribution:**
-
-```hcl
-module "sie_gke" {
-  source = "superlinked/sie/google"
-
-  nats_enabled              = true
-  nats_config_store_bucket  = "my-project-sie-configs"  # Creates GCS bucket + IAM
-  nats_config_restore       = true                      # Restore on restart
-}
-```
-
-**Use external NATS:**
-
-```hcl
-module "sie_gke" {
-  source = "superlinked/sie/google"
-
-  nats_enabled = true
-  nats_install = false
-  nats_url     = "nats://my-nats-cluster:4222"
-}
-```
-
-### Ingress + auth
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `install_ingress_nginx` | `false` | Install ingress-nginx controller |
-| `sie_ingress_enabled` | `false` | Expose router via ingress |
-| `sie_ingress_host` | `""` | Hostname (empty = catch-all) |
-| `sie_ingress_tls_enabled` | `false` | Enable TLS |
-| `sie_auth_enabled` | `false` | Enable oauth2-proxy for OIDC auth |
-| `sie_auth_oidc_issuer_url` | `""` | OIDC issuer URL (required when auth enabled) |
-| `sie_router_auth_mode` | `none` | `none` or `static` (shared secret) |
-
-**Minimal auth setup (static token):**
-
-```bash
-# Create a shared secret
-kubectl create secret generic sie-auth -n sie --from-literal=SIE_AUTH_TOKEN="your-token"
-
-# Set variables
-export TF_VAR_sie_router_auth_mode="static"
-export TF_VAR_sie_router_auth_secret_name="sie-auth"
-```
-
-**OIDC auth with Dex:**
-
-```bash
-export TF_VAR_install_dex=true
-export TF_VAR_dex_values_yaml="$(cat dex-values.yaml)"
-export TF_VAR_sie_auth_enabled=true
-export TF_VAR_sie_auth_oidc_issuer_url="http://dex.dex.svc.cluster.local:5556/dex"
-```
-
-### Observability
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `external_prometheus_url` | `""` | Skip built-in Prometheus, use your own |
-| `install_loki` | `true` | Log aggregation with Loki + Alloy |
-| `install_tempo` | `false` | Distributed tracing with Tempo |
-| `enable_cloud_logging` | `true` | GKE native Cloud Logging |
-| `enable_managed_prometheus` | `false` | GKE Managed Prometheus (for GCP Console) |
-| `prometheus_retention` | `15d` | Prometheus data retention period |
-| `prometheus_storage_size` | `100Gi` | Prometheus persistent volume size |
-| `grafana_admin_password` | `admin` | Grafana admin password (change in production!) |
+The `infra/` module only creates GCP resources (VPC, GKE, node pools, IAM, Artifact Registry). The SIE application — gateway, sie-config, workers, observability stack, NATS, optional ingress + auth — is deployed separately via the [sie-cluster Helm chart](../../helm/sie-cluster/). All `install_*`, `sie_*`, and `nats_*` knobs live on the Helm values file (see `deploy/helm/sie-cluster/values.yaml`), not on this Terraform module.
 
 ## Outputs
 
@@ -269,7 +170,6 @@ After `terraform apply`, use these outputs to connect and deploy:
 | `sie_workload_service_account` | Pass to Helm for Workload Identity |
 | `workload_identity_annotation` | Direct annotation for K8s service account |
 | `gpu_node_pools` | GPU pool configs (for Helm worker pool mapping) |
-| `config_store_bucket` | GCS bucket URL for NATS config store (if created) |
 
 ## Architecture
 
@@ -284,10 +184,14 @@ After `terraform apply`, use these outputs to connect and deploy:
 +----------+          |  |  |     GKE Cluster                              |  |  |
                       |  |  |                                              |  |  |
                       |  |  |  +------------+    +----------------------+  |  |  |
-                      |  |  |  |   Router   |--->|    GPU Workers       |  |  |  |
-                      |  |  |  |   (NATS)   |    |  (L4 / A100 / T4)    |  |  |  |
-                      |  |  |  +------------+    +----------------------+  |  |  |
-                      |  |  |        |                      |              |  |  |
+                      |  |  |  |   Gateway  |--->|    GPU Workers       |  |  |  |
+                      |  |  |  |  (consumer)|    |  (L4 / A100 / T4)    |  |  |  |
+                      |  |  |  +------+-----+    +----------------------+  |  |  |
+                      |  |  |         |                    |               |  |  |
+                      |  |  |  +------+-----+              |               |  |  |
+                      |  |  |  | sie-config |  (writes + NATS deltas)      |  |  |
+                      |  |  |  +------------+              |               |  |  |
+                      |  |  |                              |               |  |  |
                       |  |  |  +--------------------------------------------+  |  |
                       |  |  |  |  KEDA . Prometheus . Grafana . Loki . NATS  |  |  |
                       |  |  |  +--------------------------------------------+  |  |
@@ -302,10 +206,6 @@ After `terraform apply`, use these outputs to connect and deploy:
                       |  |  |  Artifact Reg. |  |  Cloud NAT |  |   IAM   |   |  |
                       |  |  |  (images)      |  |  (egress)  |  |  (WI)   |   |  |
                       |  |  +----------------+  +------------+  +---------+   |  |
-                      |  |                                                    |  |
-                      |  |  +--------------------------------------------+    |  |
-                      |  |  |  GCS Config Store (NATS persistence)       |    |  |
-                      |  |  +--------------------------------------------+    |  |
                       |  +----------------------------------------------------+  |
                       +----------------------------------------------------------+
 ```
@@ -324,9 +224,13 @@ gcloud auth configure-docker $(terraform output -raw artifact_registry_url | cut
 docker tag sie-server:latest $(terraform output -raw artifact_registry_url)/sie-server:latest
 docker push $(terraform output -raw artifact_registry_url)/sie-server:latest
 
-# Push router image
-docker tag sie-router:latest $(terraform output -raw artifact_registry_url)/sie-router:latest
-docker push $(terraform output -raw artifact_registry_url)/sie-router:latest
+# Push gateway image
+docker tag sie-gateway:latest $(terraform output -raw artifact_registry_url)/sie-gateway:latest
+docker push $(terraform output -raw artifact_registry_url)/sie-gateway:latest
+
+# Push sie-config image
+docker tag sie-config:latest $(terraform output -raw artifact_registry_url)/sie-config:latest
+docker push $(terraform output -raw artifact_registry_url)/sie-config:latest
 ```
 
 ## Security features
@@ -342,7 +246,6 @@ This module follows GCP security best practices out of the box:
 - **Image streaming** — GCFS enabled for fast container startup
 - **Registry cleanup** — automatic deletion of dev/test images after 14 days, untagged after 30 days
 - **Legacy endpoints disabled** — metadata concealment on all nodes
-- **Config store bucket** — uniform bucket-level access, public access prevention enforced
 
 ## Cleanup
 

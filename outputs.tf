@@ -108,15 +108,6 @@ output "gpu_node_pools" {
 }
 
 # =============================================================================
-# NATS Config Store
-# =============================================================================
-
-output "config_store_bucket" {
-  description = "GCS bucket URL for NATS config store (gs://bucket-name, or null if not created)"
-  value       = var.nats_config_store_bucket != "" ? "gs://${google_storage_bucket.config_store[0].name}" : null
-}
-
-# =============================================================================
 # kubectl Configuration
 # =============================================================================
 
