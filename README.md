@@ -54,9 +54,6 @@ helm upgrade --install sie-cluster ../../deploy/helm/sie-cluster \
 | Example | GPU | Description |
 |---------|-----|-------------|
 | [`dev-l4-spot`](examples/dev-l4-spot/) | L4 (g2-standard-8) | Spot instances, scale 0-5 nodes, minimal cost for development |
-| [`production`](examples/production/) | L4 + A100 | Multi-tier GPU pools, on-demand + spot, HA CPU pool, STABLE release channel |
-| [`eval-eu`](examples/eval-eu/) | L4 + A100 | Europe (europe-west4), spot instances, static token auth |
-| [`eval-matrix`](examples/eval-matrix/) | L4 | Matrix evaluation cluster, up to 16 GPU nodes for parallel model evaluation |
 
 ## Prerequisites
 
@@ -246,6 +243,15 @@ This module follows GCP security best practices out of the box:
 - **Image streaming** — GCFS enabled for fast container startup
 - **Registry cleanup** — automatic deletion of dev/test images after 14 days, untagged after 30 days
 - **Legacy endpoints disabled** — metadata concealment on all nodes
+
+## Bring-your-own components
+
+Some pieces of a production deployment are intentionally not turnkey — either because they're cluster-wide / cross-stack concerns (registry, OIDC) or because they require domains and DNS records that only you can own (TLS, DNS). This module lets you opt out where it makes sense and points at the right knobs.
+
+- **Container registry** — optional. The module manages a regional Artifact Registry by default (`create_artifact_registry = true`, see [`infra/variables.tf:263`](infra/variables.tf)). Set `create_artifact_registry = false` to reuse a registry managed by another stack in the same project; the `artifact_registry_url` output is still emitted so Helm / Workload Identity wiring is unchanged. To use any external registry, point the Helm chart at it via `gateway.image.repository`, `workers.common.image.repository`, and `config.image.repository`.
+- **TLS certificate** — BYO by default. Either supply a `kubernetes.io/tls` Secret and set `ingress.tls.mode: byo`, or install cert-manager once in the cluster and set `ingress.tls.mode: cert-manager` for automated Let's Encrypt issuance via HTTP-01. See the [chart README's TLS / HTTPS section](../../helm/sie-cluster/README.md#tls--https). DNS-01 / wildcard / Google-managed certificate paths are out of scope for the chart.
+- **DNS / domain** — always BYO. This module does not provision Cloud DNS zones or records. After `terraform apply`, take the ingress controller's LoadBalancer IP (`kubectl -n ingress-nginx get svc ingress-nginx-controller`) and create an A/AAAA record pointing at it under a domain you control.
+- **OIDC provider** — BYO. When `auth.enabled: true` in the chart, set `auth.oauth2Proxy.oidcIssuerUrl` and the corresponding client ID / secret to your existing identity provider (Okta, Auth0, Google Workspace, Azure AD, …). The module does not create an IdP.
 
 ## Cleanup
 
