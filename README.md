@@ -230,6 +230,33 @@ docker tag sie-config:latest $(terraform output -raw artifact_registry_url)/sie-
 docker push $(terraform output -raw artifact_registry_url)/sie-config:latest
 ```
 
+## Model cache and payload store
+
+SIE clusters benefit from two object-store backed features that share a single GCS bucket:
+
+- **Model cache**: pre-staged model weights at `gs://<bucket>/models/`, so workers cold-start from object storage rather than re-downloading from Hugging Face on every pod spin-up.
+- **Payload store**: large work-item payloads (images, long documents that exceed the 1 MiB NATS in-band budget) at `gs://<bucket>/payloads/`, written by the gateway and read once by the worker. Garbage-collected by a runtime TTL plus a bucket lifecycle rule.
+
+Set `create_model_cache = true` and the module:
+
+1. Provisions a managed GCS bucket with uniform bucket-level access, public-access prevention enforced, and a lifecycle rule that deletes objects under the `payloads/` prefix after one day (configurable via `model_cache_payload_expiration_days`).
+2. Defines two custom IAM roles (`sie_model_cache_reader`, `sie_payload_store_writer`) with the minimum permission set each side needs.
+3. Binds both roles to the SIE workload service account with **IAM Conditions** that scope each role to its own top-level prefix (`models/` for read, `payloads/` for read/write/delete). Workers can read weights but cannot delete or overwrite them; the gateway can write and delete payload refs but cannot touch weights.
+
+After apply, pass the bucket into Helm with one terraform output:
+
+```bash
+helm upgrade --install sie-cluster ../../deploy/helm/sie-cluster \
+  -f ../../deploy/helm/sie-cluster/values-gke.yaml \
+  --create-namespace -n sie \
+  --set serviceAccount.annotations."iam\.gke\.io/gcp-service-account"="$(terraform output -raw workload_identity_annotation)" \
+  $(terraform output -raw model_cache_helm_args)
+```
+
+The chart auto-derives `payloadStore.url` from `workers.common.clusterCache.url`, so a single `--set` for the cache covers both features. Operators who manage their own bucket can opt out (`create_model_cache = false`, default) and pass `gcs_bucket_name` instead; that path keeps the broader `roles/storage.objectViewer` binding for backward compatibility, but you forgo the prefix-scoped roles and the lifecycle rule.
+
+See `infra/gcs_model_cache.tf` and `infra/iam.tf` for the resource definitions and condition expressions.
+
 ## Security features
 
 This module follows GCP security best practices out of the box:

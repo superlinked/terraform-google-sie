@@ -245,9 +245,114 @@ variable "sie_namespace" {
 }
 
 variable "gcs_bucket_name" {
-  description = "GCS bucket for model cache (optional, creates bucket if set)"
+  description = <<-EOT
+    Name of a pre-existing GCS bucket to grant the SIE workload identity read
+    access to under the conventional `models/` prefix. Use this for BYO-bucket
+    deployments. Leave empty and set `create_model_cache = true` to have the
+    module provision a managed bucket with prefix-scoped custom IAM roles
+    (recommended for new clusters).
+  EOT
   type        = string
   default     = ""
+}
+
+# =============================================================================
+# Model cache + payload store
+#
+# When `create_model_cache = true` the module provisions a single GCS bucket
+# that serves two co-tenant workloads at sibling top-level prefixes:
+#
+#   gs://<bucket>/models/...    Model weights, populated by `sie-admin cache
+#                               populate` and read by SIE workers at startup.
+#                               Long-lived; no lifecycle expiration.
+#
+#   gs://<bucket>/payloads/...  Large work-item payloads (images, long
+#                               documents) that exceed the in-band 1MiB
+#                               NATS message budget. Written by sie-gateway
+#                               on each request and read once by a worker.
+#                               Garbage-collected by the runtime TTL (300s
+#                               by default) and by a bucket lifecycle rule
+#                               (`age = 1` day) for any orphans.
+#
+# Two custom IAM roles bound to the workload service account, each gated by
+# an IAM Condition that scopes its permissions to its prefix:
+#
+#   {project}-{cluster}-sie-model-cache-reader  read on  models/*
+#   {project}-{cluster}-sie-payload-store-writer  read+create+delete on  payloads/*
+#
+# This is least-privilege: the workload identity can read weights but cannot
+# delete or overwrite them, and can write payloads but cannot touch weights.
+# See `gcs_model_cache.tf` and `iam.tf` for the resource definitions.
+# =============================================================================
+
+variable "create_model_cache" {
+  description = <<-EOT
+    Create a managed GCS bucket that serves as both the model cache (under
+    `models/`) and the gateway payload store (under `payloads/`). When true,
+    the module also creates two prefix-scoped custom IAM roles and binds
+    them to the SIE workload service account. Leave false (default) and set
+    `gcs_bucket_name` to keep BYO-bucket behavior.
+  EOT
+  type        = bool
+  default     = false
+}
+
+variable "model_cache_location" {
+  description = <<-EOT
+    Location for the managed model-cache bucket. Accepts any GCS location
+    string: a region (`us-central1`), a dual-region (`nam4`), or a
+    multi-region (`US`). Defaults to the deployment region for lowest
+    egress to the cluster. Only used when `create_model_cache = true`.
+  EOT
+  type        = string
+  default     = ""
+}
+
+variable "model_cache_storage_class" {
+  description = <<-EOT
+    Default storage class for objects in the managed model-cache bucket.
+    `STANDARD` is the right choice for typical SIE workloads (model
+    weights read on every cold-start, payloads read seconds after write).
+    Only used when `create_model_cache = true`.
+  EOT
+  type        = string
+  default     = "STANDARD"
+}
+
+variable "model_cache_versioning_enabled" {
+  description = <<-EOT
+    Enable object versioning on the managed model-cache bucket. Off by
+    default; the cache layout is content-addressable and versioning adds
+    storage cost with no rollback value for the payload-store prefix.
+    Only used when `create_model_cache = true`.
+  EOT
+  type        = bool
+  default     = false
+}
+
+variable "model_cache_kms_key_name" {
+  description = <<-EOT
+    Fully qualified Cloud KMS key resource name
+    (`projects/.../locations/.../keyRings/.../cryptoKeys/...`) for CMEK
+    encryption of objects in the managed model-cache bucket. Leave empty
+    to use Google-managed encryption keys. Only used when
+    `create_model_cache = true`.
+  EOT
+  type        = string
+  default     = ""
+}
+
+variable "model_cache_payload_expiration_days" {
+  description = <<-EOT
+    Lifecycle expiration (in days) for objects under the `payloads/`
+    prefix. The runtime TTL on the gateway is the primary GC mechanism
+    (default 300s); this bucket lifecycle rule is the long-tail safety
+    net for orphans left behind by gateway crashes between PutObject and
+    queue ack. Day granularity is a GCS lifecycle limit. Only used when
+    `create_model_cache = true`.
+  EOT
+  type        = number
+  default     = 1
 }
 
 # =============================================================================

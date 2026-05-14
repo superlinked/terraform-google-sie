@@ -76,6 +76,57 @@ output "subnetwork_name" {
 }
 
 # =============================================================================
+# Model Cache and Payload Store (managed bucket)
+#
+# Populated only when `create_model_cache = true`. The `model_cache_helm_args`
+# output is the recommended way to pass these values to Helm so the chart's
+# auto-derivation kicks in and points the payload store at the same bucket
+# under the sibling `payloads/` prefix.
+# =============================================================================
+
+output "model_cache_bucket_name" {
+  description = "Name of the managed GCS model-cache bucket. Null when create_model_cache=false."
+  value       = local.managed_model_cache_bucket
+}
+
+output "model_cache_bucket_url" {
+  description = <<-EOT
+    GCS URL of the managed model-cache bucket including the `/models`
+    prefix. Pass to Helm as `workers.common.clusterCache.url`, and to
+    `sie-admin cache populate` as `--target`. Null when
+    `create_model_cache=false`.
+  EOT
+  value       = try("gs://${local.managed_model_cache_bucket}/models", null)
+}
+
+output "payload_store_url" {
+  description = <<-EOT
+    GCS URL of the gateway payload store (managed model-cache bucket
+    under the `/payloads` prefix). Exposed for visibility; the Helm chart
+    auto-derives this from `workers.common.clusterCache.url` so most
+    operators do not need to set it directly. Null when
+    `create_model_cache=false`.
+  EOT
+  value       = try("gs://${local.managed_model_cache_bucket}/payloads", null)
+}
+
+output "model_cache_helm_args" {
+  description = <<-EOT
+    Helm --set arguments to wire the managed model-cache bucket into the
+    sie-cluster chart. The chart's auto-derivation produces a payload-
+    store URL at the `payloads/` prefix of the same bucket once
+    `clusterCache.url` is set. Empty when `create_model_cache=false`.
+  EOT
+  value = try(
+    join(" ", [
+      "--set workers.common.clusterCache.enabled=true",
+      "--set workers.common.clusterCache.url=gs://${local.managed_model_cache_bucket}/models",
+    ]),
+    ""
+  )
+}
+
+# =============================================================================
 # Artifact Registry
 # =============================================================================
 

@@ -34,7 +34,7 @@
 #   terraform destroy
 
 terraform {
-  required_version = "~> 1.14.3"
+  required_version = ">= 1.14"
 
   # Uncomment to use GCS backend for state
   # backend "gcs" {
@@ -82,7 +82,7 @@ variable "deployer_service_account" {
 
 module "infra" {
   source  = "superlinked/sie/google"
-  version = "0.3.3"
+  version = "0.3.4"
 
   project_id               = var.project_id
   region                   = var.region
