@@ -49,6 +49,12 @@ resource "google_container_node_pool" "cpu" {
       }
     }
 
+    # Kubelet log rotation
+    kubelet_config {
+      container_log_max_size  = var.kubelet_container_log_max_size
+      container_log_max_files = var.kubelet_container_log_max_files
+    }
+
     labels = merge(local.resource_labels, {
       "sie.superlinked.com/node-type" = "cpu"
     })
@@ -147,6 +153,12 @@ resource "google_container_node_pool" "gpu" {
       content {
         mode = "GKE_METADATA"
       }
+    }
+
+    # Kubelet log rotation
+    kubelet_config {
+      container_log_max_size  = var.kubelet_container_log_max_size
+      container_log_max_files = var.kubelet_container_log_max_files
     }
 
     # Labels (includes sie-cluster for filtering/cleanup)

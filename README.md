@@ -100,6 +100,8 @@ This creates a service account with the minimum roles needed to deploy SIE infra
 |----------|---------|-------------|
 | `gpu_node_pools` | 1x L4 spot pool | List of GPU node pool configurations (see below) |
 | `cpu_node_pool` | e2-standard-4 | CPU pool for system workloads (kube-system, monitoring) |
+| `kubelet_container_log_max_size` | `20Mi` | Per-container kubelet log file size before rotation |
+| `kubelet_container_log_max_files` | `30` | Rotated files retained per container; kubelet retention is size/count based, not hourly |
 
 Each entry in `gpu_node_pools` supports:
 
@@ -276,7 +278,12 @@ This module follows GCP security best practices out of the box:
 Some pieces of a production deployment are intentionally not turnkey — either because they're cluster-wide / cross-stack concerns (registry, OIDC) or because they require domains and DNS records that only you can own (TLS, DNS). This module lets you opt out where it makes sense and points at the right knobs.
 
 - **Container registry** — optional. The module manages a regional Artifact Registry by default (`create_artifact_registry = true`, see [`infra/variables.tf:263`](infra/variables.tf)). Set `create_artifact_registry = false` to reuse a registry managed by another stack in the same project; the `artifact_registry_url` output is still emitted so Helm / Workload Identity wiring is unchanged. To use any external registry, point the Helm chart at it via `gateway.image.repository`, `workers.common.image.repository`, and `config.image.repository`.
-- **TLS certificate** — BYO by default. Either supply a `kubernetes.io/tls` Secret and set `ingress.tls.mode: byo`, or install cert-manager once in the cluster and set `ingress.tls.mode: cert-manager` for automated Let's Encrypt issuance via HTTP-01. See the [chart README's TLS / HTTPS section](../../helm/sie-cluster/README.md#tls--https). DNS-01 / wildcard / Google-managed certificate paths are out of scope for the chart.
+- **TLS certificate** — BYO by default. Set `ingress.tls.mode` to one of:
+  - `byo` — supply your own `kubernetes.io/tls` Secret.
+  - `cert-manager` — install cert-manager once in the cluster; the chart annotates the Ingress for automated Let's Encrypt issuance via HTTP-01.
+  - `self-signed` — for air-gapped clusters; set `certManagerBundle.certManager.install: true` to bundle cert-manager (single-tenant clusters only).
+
+  See the [chart README's TLS / HTTPS section](../../helm/sie-cluster/README.md#tls--https). DNS-01 / wildcard / Google-managed certificate paths are out of scope for the chart.
 - **DNS / domain** — always BYO. This module does not provision Cloud DNS zones or records. After `terraform apply`, take the ingress controller's LoadBalancer IP (`kubectl -n ingress-nginx get svc ingress-nginx-controller`) and create an A/AAAA record pointing at it under a domain you control.
 - **OIDC provider** — BYO. When `auth.enabled: true` in the chart, set `auth.oauth2Proxy.oidcIssuerUrl` and the corresponding client ID / secret to your existing identity provider (Okta, Auth0, Google Workspace, Azure AD, …). The module does not create an IdP.
 

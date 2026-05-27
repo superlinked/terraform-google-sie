@@ -40,8 +40,12 @@ locals {
   current_is_service_account = local.current_email != "" && endswith(local.current_email, ".iam.gserviceaccount.com")
   deployer_service_account   = var.deployer_service_account != "" ? var.deployer_service_account : (local.current_is_service_account ? local.current_email : "")
 
-  # Standard labels for all resources - includes cluster name for cleanup/filtering
+  # Standard labels for all resources - includes project + cluster name for
+  # cost allocation (BigQuery billing export) and cleanup/filtering.
+  # The inner literal is the second arg to merge() so it wins over var.labels,
+  # ensuring "project=sie" is uniform across clusters regardless of caller input.
   resource_labels = merge(var.labels, {
+    "project"     = "sie"
     "sie-cluster" = var.cluster_name
   })
 }

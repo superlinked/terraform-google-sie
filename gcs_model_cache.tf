@@ -85,5 +85,5 @@ resource "google_storage_bucket" "model_cache" {
     }
   }
 
-  labels = var.labels
+  labels = local.resource_labels
 }

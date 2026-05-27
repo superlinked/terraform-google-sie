@@ -223,6 +223,32 @@ variable "cpu_node_pool" {
 }
 
 # =============================================================================
+# Kubelet Log Retention
+# =============================================================================
+
+variable "kubelet_container_log_max_size" {
+  description = "Maximum size of a single kubelet-managed container log file before rotation. Kubelet rotates by size/files, not wall-clock retention."
+  type        = string
+  default     = "20Mi"
+
+  validation {
+    condition     = can(regex("^[1-9][0-9]*(Ei|Pi|Ti|Gi|Mi|Ki|E|P|T|G|M|K)?$", var.kubelet_container_log_max_size))
+    error_message = "kubelet_container_log_max_size must be a positive whole-number Kubernetes quantity such as 20Mi."
+  }
+}
+
+variable "kubelet_container_log_max_files" {
+  description = "Maximum number of rotated kubelet-managed container log files to retain per container."
+  type        = number
+  default     = 30
+
+  validation {
+    condition     = var.kubelet_container_log_max_files >= 2 && floor(var.kubelet_container_log_max_files) == var.kubelet_container_log_max_files
+    error_message = "kubelet_container_log_max_files must be an integer at least 2."
+  }
+}
+
+# =============================================================================
 # Workload Identity
 # =============================================================================
 
