@@ -1,6 +1,6 @@
 # SIE GKE Terraform - Validation Tests
 #
-# Run with: terraform test
+# Run with: terraform -chdir=deploy/terraform/gcp/infra test
 # Requires Terraform >= 1.7.0
 
 # =============================================================================
