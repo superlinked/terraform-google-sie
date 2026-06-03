@@ -165,3 +165,24 @@ run "validate_service_account_permissions" {
     error_message = "Node SA should have Artifact Registry reader role"
   }
 }
+
+run "validate_artifact_registry_image_paths" {
+  command = plan
+
+  variables {
+    project_id   = "test-project"
+    cluster_name = "sie-test"
+    region       = "us-central1"
+  }
+
+  assert {
+    condition     = local.artifact_registry_url == "us-central1-docker.pkg.dev/test-project/sie-test-images"
+    error_message = "Artifact Registry URL should follow the cluster registry naming convention"
+  }
+
+  assert {
+    condition     = local.artifact_registry_server_repository_url == "us-central1-docker.pkg.dev/test-project/sie-test-images/sie-server"
+    error_message = "Artifact Registry server image path should end with sie-server"
+  }
+
+}

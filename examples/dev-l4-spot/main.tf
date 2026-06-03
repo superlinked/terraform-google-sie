@@ -82,7 +82,7 @@ variable "deployer_service_account" {
 
 module "infra" {
   source  = "superlinked/sie/google"
-  version = "0.4.1"
+  version = "0.4.2"
 
   project_id               = var.project_id
   region                   = var.region
@@ -167,6 +167,21 @@ output "kubectl_command" {
 output "artifact_registry_url" {
   description = "Artifact Registry URL for pushing images"
   value       = module.infra.artifact_registry_url
+}
+
+output "artifact_registry_server_repository_url" {
+  description = "Artifact Registry image repository URL for sie-server images"
+  value       = module.infra.artifact_registry_server_repository_url
+}
+
+output "artifact_registry_gateway_repository_url" {
+  description = "Artifact Registry image repository URL for sie-gateway images"
+  value       = module.infra.artifact_registry_gateway_repository_url
+}
+
+output "artifact_registry_config_repository_url" {
+  description = "Artifact Registry image repository URL for sie-config images"
+  value       = module.infra.artifact_registry_config_repository_url
 }
 
 output "workload_identity_annotation" {

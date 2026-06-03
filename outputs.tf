@@ -132,7 +132,22 @@ output "model_cache_helm_args" {
 
 output "artifact_registry_url" {
   description = "Artifact Registry URL for SIE images"
-  value       = var.create_artifact_registry ? "${var.artifact_registry_location != "" ? var.artifact_registry_location : var.region}-docker.pkg.dev/${var.project_id}/${local.names.registry}" : null
+  value       = local.artifact_registry_url
+}
+
+output "artifact_registry_server_repository_url" {
+  description = "Artifact Registry image repository URL for sie-server images"
+  value       = local.artifact_registry_server_repository_url
+}
+
+output "artifact_registry_gateway_repository_url" {
+  description = "Artifact Registry image repository URL for sie-gateway images"
+  value       = local.artifact_registry_gateway_repository_url
+}
+
+output "artifact_registry_config_repository_url" {
+  description = "Artifact Registry image repository URL for sie-config images"
+  value       = local.artifact_registry_config_repository_url
 }
 
 # =============================================================================
@@ -207,6 +222,8 @@ output "kubernetes_token" {
 #                                  (iam.gke.io/gcp-service-account)
 #   workload_identity_annotation -> direct annotation value for service account
 #   artifact_registry_url     -> image registry base URL
+#   artifact_registry_*_repository_url -> per-image repository URLs for
+#                                gateway, sie-config, and sie-server
 #   gpu_node_pools            -> .workers[*].nodeSelector / tolerations
 #                                (use labels and taints from pool configs)
 #   kubectl_config_command    -> run before `helm install` to configure kubectl

@@ -166,6 +166,9 @@ After `terraform apply`, use these outputs to connect and deploy:
 | `cluster_name` | GKE cluster name |
 | `cluster_endpoint` | GKE cluster API endpoint (sensitive) |
 | `artifact_registry_url` | Where to push Docker images |
+| `artifact_registry_server_repository_url` | Where to push `sie-server` images |
+| `artifact_registry_gateway_repository_url` | Where to push `sie-gateway` images |
+| `artifact_registry_config_repository_url` | Where to push `sie-config` images |
 | `sie_workload_service_account` | Pass to Helm for Workload Identity |
 | `workload_identity_annotation` | Direct annotation for K8s service account |
 | `gpu_node_pools` | GPU pool configs (for Helm worker pool mapping) |
@@ -210,8 +213,7 @@ After `terraform apply`, use these outputs to connect and deploy:
 ```
 
 ## Pushing images to Artifact Registry
->
-> This is optional, because the official image is available at `ghcr.io/superlinked/`.
+> This is optional, because the official images are available under `ghcr.io/superlinked/`.
 
 After `terraform apply`, push your SIE Docker images:
 
@@ -220,16 +222,16 @@ After `terraform apply`, push your SIE Docker images:
 gcloud auth configure-docker $(terraform output -raw artifact_registry_url | cut -d/ -f1)
 
 # Push server image
-docker tag sie-server:latest $(terraform output -raw artifact_registry_url)/sie-server:latest
-docker push $(terraform output -raw artifact_registry_url)/sie-server:latest
+docker tag sie-server:latest $(terraform output -raw artifact_registry_server_repository_url):latest
+docker push $(terraform output -raw artifact_registry_server_repository_url):latest
 
 # Push gateway image
-docker tag sie-gateway:latest $(terraform output -raw artifact_registry_url)/sie-gateway:latest
-docker push $(terraform output -raw artifact_registry_url)/sie-gateway:latest
+docker tag sie-gateway:latest $(terraform output -raw artifact_registry_gateway_repository_url):latest
+docker push $(terraform output -raw artifact_registry_gateway_repository_url):latest
 
 # Push sie-config image
-docker tag sie-config:latest $(terraform output -raw artifact_registry_url)/sie-config:latest
-docker push $(terraform output -raw artifact_registry_url)/sie-config:latest
+docker tag sie-config:latest $(terraform output -raw artifact_registry_config_repository_url):latest
+docker push $(terraform output -raw artifact_registry_config_repository_url):latest
 ```
 
 ## Model cache and payload store
@@ -277,8 +279,8 @@ This module follows GCP security best practices out of the box:
 
 Some pieces of a production deployment are intentionally not turnkey — either because they're cluster-wide / cross-stack concerns (registry, OIDC) or because they require domains and DNS records that only you can own (TLS, DNS). This module lets you opt out where it makes sense and points at the right knobs.
 
-- **Container registry** — optional. The module manages a regional Artifact Registry by default (`create_artifact_registry = true`, see [`infra/variables.tf:263`](infra/variables.tf)). Set `create_artifact_registry = false` to reuse a registry managed by another stack in the same project; the `artifact_registry_url` output is still emitted so Helm / Workload Identity wiring is unchanged. To use any external registry, point the Helm chart at it via `gateway.image.repository`, `workers.common.image.repository`, and `config.image.repository`.
-- **TLS certificate** — BYO by default. Set `ingress.tls.mode` to one of:
+- **Container registry** — optional. The module manages a regional Artifact Registry by default (`create_artifact_registry = true`, see [`infra/variables.tf`](infra/variables.tf)). Set `create_artifact_registry = false` to reuse a registry managed by another stack; in that mode `artifact_registry_url` and the per-image repository outputs stay `null`, so pass `mise run cluster -- create --registry <external-url>` or point the Helm chart at the external registry via `gateway.image.repository`, `workers.common.image.repository`, and `config.image.repository`. The worker-sidecar uses the chart's `ghcr.io/superlinked/sie-server-sidecar` default.
+- **TLS certificate** — BYO by default. Set `ingress.tlsConfig.mode` to one of:
   - `byo` — supply your own `kubernetes.io/tls` Secret.
   - `cert-manager` — install cert-manager once in the cluster; the chart annotates the Ingress for automated Let's Encrypt issuance via HTTP-01.
   - `self-signed` — for air-gapped clusters; set `certManagerBundle.certManager.install: true` to bundle cert-manager (single-tenant clusters only).

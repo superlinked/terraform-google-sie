@@ -6,6 +6,14 @@
 # Artifact Registry
 # =============================================================================
 
+locals {
+  artifact_registry_url = var.create_artifact_registry ? "${var.artifact_registry_location != "" ? var.artifact_registry_location : var.region}-docker.pkg.dev/${var.project_id}/${local.names.registry}" : null
+
+  artifact_registry_server_repository_url  = local.artifact_registry_url == null ? null : "${local.artifact_registry_url}/sie-server"
+  artifact_registry_gateway_repository_url = local.artifact_registry_url == null ? null : "${local.artifact_registry_url}/sie-gateway"
+  artifact_registry_config_repository_url  = local.artifact_registry_url == null ? null : "${local.artifact_registry_url}/sie-config"
+}
+
 resource "google_artifact_registry_repository" "sie" {
   count = var.create_artifact_registry ? 1 : 0
 

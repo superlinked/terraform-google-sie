@@ -31,7 +31,7 @@ After apply, deploy SIE via Helm:
 $(terraform output -raw kubectl_command)
 
 # Install SIE (gateway, workers, KEDA, Prometheus, Grafana)
-helm upgrade --install sie-cluster oci://ghcr.io/superlinked/charts/sie-cluster --version 0.4.1 \
+helm upgrade --install sie-cluster oci://ghcr.io/superlinked/charts/sie-cluster --version 0.4.2 \
   -f values-gke.yaml \
   --create-namespace -n sie \
   --set serviceAccount.annotations."iam\.gke\.io/gcp-service-account"="$(terraform output -raw workload_identity_annotation)"
@@ -54,6 +54,9 @@ helm upgrade --install sie-cluster oci://ghcr.io/superlinked/charts/sie-cluster 
 | `cluster_name` | GKE cluster name |
 | `kubectl_command` | Run this to configure kubectl |
 | `artifact_registry_url` | URL for pushing Docker images |
+| `artifact_registry_server_repository_url` | Push target for `sie-server` images |
+| `artifact_registry_gateway_repository_url` | Push target for `sie-gateway` images |
+| `artifact_registry_config_repository_url` | Push target for `sie-config` images |
 | `workload_identity_annotation` | Annotation for Helm service account |
 
 ## Customizing
