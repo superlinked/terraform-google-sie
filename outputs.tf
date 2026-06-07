@@ -47,6 +47,11 @@ output "region" {
   value       = var.region
 }
 
+output "gpu_node_pool_disk_sizes_gb" {
+  description = "Boot disk size in GiB for each configured GPU node pool."
+  value       = { for pool in var.gpu_node_pools : pool.name => pool.disk_size_gb }
+}
+
 # =============================================================================
 # Service Accounts
 # =============================================================================

@@ -172,6 +172,7 @@ After `terraform apply`, use these outputs to connect and deploy:
 | `sie_workload_service_account` | Pass to Helm for Workload Identity |
 | `workload_identity_annotation` | Direct annotation for K8s service account |
 | `gpu_node_pools` | GPU pool configs (for Helm worker pool mapping) |
+| `gpu_node_pool_disk_sizes_gb` | Boot disk size per configured GPU node pool |
 
 ## Architecture
 
