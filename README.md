@@ -1,6 +1,6 @@
 # SIE GKE Terraform Module
 
-One command to get a GPU-ready GKE cluster for [SIE](https://github.com/superlinked/sie) (Search Inference Engine). The module creates the underlying GCP resources (VPC, GKE, GPU node pools, Artifact Registry, IAM, optional model-cache GCS bucket); the SIE application itself — gateway, sie-config, workers, KEDA, Prometheus, Grafana, Loki, NATS — is deployed on top via the [sie-cluster Helm chart](../../helm/sie-cluster/).
+One command to get a GPU-ready GKE cluster for [SIE](https://github.com/superlinked/sie) (Search Inference Engine). The module creates the underlying GCP resources (VPC, GKE, GPU node pools, Artifact Registry, IAM, optional model-cache GCS bucket); the SIE application itself - gateway, sie-config, workers, KEDA, Prometheus, Grafana, Loki, NATS - is deployed on top via the [sie-cluster Helm chart](../../helm/sie-cluster/).
 
 - GPU node pools sized for scale-to-zero via KEDA (configured in the Helm chart)
 - Artifact Registry with cleanup policies
@@ -9,13 +9,13 @@ One command to get a GPU-ready GKE cluster for [SIE](https://github.com/superlin
 ## What you get
 
 - **GKE cluster** with VPC-native networking, private nodes, and Cloud NAT
-- **GPU node pools** — L4, T4, A100, or A100-80GB, with automatic driver installation
-- **Scale-to-zero** — GPU nodes scale down to zero when idle, so you only pay when running inference
-- **Node Auto-Provisioning (NAP)** — GKE automatically creates node pools to fit pending workloads
-- **Artifact Registry** — private Docker registry with automatic cleanup policies for dev images
-- **Workload Identity** — pods authenticate to GCP without service account keys
-- **Observability-ready** — outputs wired for the Helm chart's Prometheus, Grafana, Loki, and KEDA integration
-- **Paired with the sie-cluster Helm chart** — Kubernetes workloads (gateway, sie-config, workers, NATS, ingress, auth) are installed on top of this cluster via Helm
+- **GPU node pools** - L4, T4, A100, or A100-80GB, with automatic driver installation
+- **Scale-to-zero** - GPU nodes scale down to zero when idle, so you only pay when running inference
+- **Node Auto-Provisioning (NAP)** - GKE automatically creates node pools to fit pending workloads
+- **Artifact Registry** - private Docker registry with automatic cleanup policies for dev images
+- **Workload Identity** - pods authenticate to GCP without service account keys
+- **Observability-ready** - outputs wired for the Helm chart's Prometheus, Grafana, Loki, and KEDA integration
+- **Paired with the sie-cluster Helm chart** - Kubernetes workloads (gateway, sie-config, workers, NATS, ingress, auth) are installed on top of this cluster via Helm
 
 ## Module structure
 
@@ -58,7 +58,7 @@ helm upgrade --install sie-cluster ../../deploy/helm/sie-cluster \
 ## Prerequisites
 
 1. **GCP project** with billing enabled
-2. **GPU quota** in your target region — check with: `gcloud compute regions describe REGION --format="table(quotas.filter(metric:NVIDIA))"`. Request increases at [IAM & Admin > Quotas](https://console.cloud.google.com/iam-admin/quotas).
+2. **GPU quota** in your target region - check with: `gcloud compute regions describe REGION --format="table(quotas.filter(metric:NVIDIA))"`. Request increases at [IAM & Admin > Quotas](https://console.cloud.google.com/iam-admin/quotas).
 3. **APIs enabled**: `container.googleapis.com`, `compute.googleapis.com`, `artifactregistry.googleapis.com`
 4. **Terraform** >= 1.14
 
@@ -107,12 +107,12 @@ Each entry in `gpu_node_pools` supports:
 
 | Field | Required | Default | Description |
 |-------|----------|---------|-------------|
-| `name` | yes | -- | Pool name (e.g., `l4-spot`) |
-| `machine_type` | yes | -- | GCE machine type |
-| `gpu_type` | yes | -- | Accelerator type |
-| `gpu_count` | yes | -- | GPUs per node |
-| `min_node_count` | yes | -- | Minimum nodes (0 = scale-to-zero) |
-| `max_node_count` | yes | -- | Maximum nodes |
+| `name` | yes | n/a | Pool name (e.g., `l4-spot`) |
+| `machine_type` | yes | n/a | GCE machine type |
+| `gpu_type` | yes | n/a | Accelerator type |
+| `gpu_count` | yes | n/a | GPUs per node |
+| `min_node_count` | yes | n/a | Minimum nodes (0 = scale-to-zero) |
+| `max_node_count` | yes | n/a | Maximum nodes |
 | `spot` | no | `false` | Use spot VMs (~60-91% savings) |
 | `disk_size_gb` | no | `100` | Boot disk size |
 | `disk_type` | no | `pd-ssd` | Boot disk type |
@@ -154,7 +154,7 @@ Each entry in `gpu_node_pools` supports:
 
 ### Application layer
 
-The `infra/` module only creates GCP resources (VPC, GKE, node pools, IAM, Artifact Registry). The SIE application — gateway, sie-config, workers, observability stack, NATS, optional ingress + auth — is deployed separately via the [sie-cluster Helm chart](../../helm/sie-cluster/). All `install_*`, `sie_*`, and `nats_*` knobs live on the Helm values file (see `deploy/helm/sie-cluster/values.yaml`), not on this Terraform module.
+The `infra/` module only creates GCP resources (VPC, GKE, node pools, IAM, Artifact Registry). The SIE application - gateway, sie-config, workers, observability stack, NATS, optional ingress + auth - is deployed separately via the [sie-cluster Helm chart](../../helm/sie-cluster/). All `install_*`, `sie_*`, and `nats_*` knobs live on the Helm values file (see `deploy/helm/sie-cluster/values.yaml`), not on this Terraform module.
 
 ## Outputs
 
@@ -266,29 +266,29 @@ See `infra/gcs_model_cache.tf` and `infra/iam.tf` for the resource definitions a
 
 This module follows GCP security best practices out of the box:
 
-- **Private nodes** — worker nodes have no public IPs; egress via Cloud NAT
-- **Shielded nodes** — Secure Boot and Integrity Monitoring on all node pools
-- **Workload Identity** — pods use GCP service accounts, no JSON key files
-- **Least-privilege IAM** — node SA has only logging, monitoring, and Artifact Registry reader
-- **VPC-native networking** — pod and service CIDRs use secondary IP ranges (alias IPs)
-- **GPU taints** — GPU nodes are tainted so only GPU workloads schedule on them
-- **Image streaming** — GCFS enabled for fast container startup
-- **Registry cleanup** — automatic deletion of dev/test images after 14 days, untagged after 30 days
-- **Legacy endpoints disabled** — metadata concealment on all nodes
+- **Private nodes** - worker nodes have no public IPs; egress via Cloud NAT
+- **Shielded nodes** - Secure Boot and Integrity Monitoring on all node pools
+- **Workload Identity** - pods use GCP service accounts, no JSON key files
+- **Least-privilege IAM** - node SA has only logging, monitoring, and Artifact Registry reader
+- **VPC-native networking** - pod and service CIDRs use secondary IP ranges (alias IPs)
+- **GPU taints** - GPU nodes are tainted so only GPU workloads schedule on them
+- **Image streaming** - GCFS enabled for fast container startup
+- **Registry cleanup** - automatic deletion of dev/test images after 14 days, untagged after 30 days
+- **Legacy endpoints disabled** - metadata concealment on all nodes
 
 ## Bring-your-own components
 
-Some pieces of a production deployment are intentionally not turnkey — either because they're cluster-wide / cross-stack concerns (registry, OIDC) or because they require domains and DNS records that only you can own (TLS, DNS). This module lets you opt out where it makes sense and points at the right knobs.
+Some pieces of a production deployment are intentionally not turnkey - either because they're cluster-wide / cross-stack concerns (registry, OIDC) or because they require domains and DNS records that only you can own (TLS, DNS). This module lets you opt out where it makes sense and points at the right knobs.
 
-- **Container registry** — optional. The module manages a regional Artifact Registry by default (`create_artifact_registry = true`, see [`infra/variables.tf`](infra/variables.tf)). Set `create_artifact_registry = false` to reuse a registry managed by another stack; in that mode `artifact_registry_url` and the per-image repository outputs stay `null`, so pass `mise run cluster -- create --registry <external-url>` or point the Helm chart at the external registry via `gateway.image.repository`, `workers.common.image.repository`, and `config.image.repository`. The worker-sidecar uses the chart's `ghcr.io/superlinked/sie-server-sidecar` default.
-- **TLS certificate** — BYO by default. Set `ingress.tlsConfig.mode` to one of:
-  - `byo` — supply your own `kubernetes.io/tls` Secret.
-  - `cert-manager` — install cert-manager once in the cluster; the chart annotates the Ingress for automated Let's Encrypt issuance via HTTP-01.
-  - `self-signed` — for air-gapped clusters; set `certManagerBundle.certManager.install: true` to bundle cert-manager (single-tenant clusters only).
+- **Container registry** - optional. The module manages a regional Artifact Registry by default (`create_artifact_registry = true`, see [`infra/variables.tf`](infra/variables.tf)). Set `create_artifact_registry = false` to reuse a registry managed by another stack; in that mode `artifact_registry_url` and the per-image repository outputs stay `null`, so pass `mise run cluster -- create --registry <external-url>` or point the Helm chart at the external registry via `gateway.image.repository`, `workers.common.image.repository`, and `config.image.repository`. The worker-sidecar uses the chart's `ghcr.io/superlinked/sie-server-sidecar` default.
+- **TLS certificate** - BYO by default. Set `ingress.tlsConfig.mode` to one of:
+  - `byo` - supply your own `kubernetes.io/tls` Secret.
+  - `cert-manager` - install cert-manager once in the cluster; the chart annotates the Ingress for automated Let's Encrypt issuance via HTTP-01.
+  - `self-signed` - for air-gapped clusters; set `certManagerBundle.certManager.install: true` to bundle cert-manager (single-tenant clusters only).
 
   See the [chart README's TLS / HTTPS section](../../helm/sie-cluster/README.md#tls--https). DNS-01 / wildcard / Google-managed certificate paths are out of scope for the chart.
-- **DNS / domain** — always BYO. This module does not provision Cloud DNS zones or records. After `terraform apply`, take the ingress controller's LoadBalancer IP (`kubectl -n ingress-nginx get svc ingress-nginx-controller`) and create an A/AAAA record pointing at it under a domain you control.
-- **OIDC provider** — BYO. When `auth.enabled: true` in the chart, set `auth.oauth2Proxy.oidcIssuerUrl` and the corresponding client ID / secret to your existing identity provider (Okta, Auth0, Google Workspace, Azure AD, …). The module does not create an IdP.
+- **DNS / domain** - always BYO. This module does not provision Cloud DNS zones or records. After `terraform apply`, take the ingress controller's LoadBalancer IP (`kubectl -n ingress-nginx get svc ingress-nginx-controller`) and create an A/AAAA record pointing at it under a domain you control.
+- **OIDC provider** - BYO. When `auth.enabled: true` in the chart, set `auth.oauth2Proxy.oidcIssuerUrl` and the corresponding client ID / secret to your existing identity provider (Okta, Auth0, Google Workspace, Azure AD, ...). The module does not create an IdP.
 
 ## Cleanup
 

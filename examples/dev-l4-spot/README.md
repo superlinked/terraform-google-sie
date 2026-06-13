@@ -1,6 +1,6 @@
 # Development Cluster with L4 Spot GPUs
 
-Creates a minimal GKE cluster with a single L4 GPU spot node pool — ideal for development and testing SIE (Search Inference Engine) workloads at low cost.
+Creates a minimal GKE cluster with a single L4 GPU spot node pool - ideal for development and testing SIE (Search Inference Engine) workloads at low cost.
 
 ## What this example creates
 
@@ -31,7 +31,7 @@ After apply, deploy SIE via Helm:
 $(terraform output -raw kubectl_command)
 
 # Install SIE (gateway, workers, KEDA, Prometheus, Grafana)
-helm upgrade --install sie-cluster oci://ghcr.io/superlinked/charts/sie-cluster --version 0.6.4 \
+helm upgrade --install sie-cluster oci://ghcr.io/superlinked/charts/sie-cluster --version 0.6.5 \
   -f values-gke.yaml \
   --create-namespace -n sie \
   --set serviceAccount.annotations."iam\.gke\.io/gcp-service-account"="$(terraform output -raw workload_identity_annotation)"
@@ -41,7 +41,7 @@ helm upgrade --install sie-cluster oci://ghcr.io/superlinked/charts/sie-cluster 
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `project_id` | — (required) | Your GCP project ID |
+| `project_id` | _(required)_ | Your GCP project ID |
 | `region` | `us-central1` | GCP region |
 | `cluster_name` | `sie-dev` | Cluster name |
 | `create_artifact_registry` | `true` | Create a Docker registry for SIE images |
