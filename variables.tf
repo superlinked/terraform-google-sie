@@ -314,13 +314,15 @@ variable "gcs_bucket_name" {
 variable "create_model_cache" {
   description = <<-EOT
     Create a managed GCS bucket that serves as both the model cache (under
-    `models/`) and the gateway payload store (under `payloads/`). When true,
-    the module also creates two prefix-scoped custom IAM roles and binds
-    them to the SIE workload service account. Leave false (default) and set
-    `gcs_bucket_name` to keep BYO-bucket behavior.
+    `models/`) and the gateway payload store (under `payloads/`). The payload
+    store is required for work items >1MB (e.g. images), so this defaults to
+    true. When true, the module also creates two prefix-scoped custom IAM
+    roles and binds them to the SIE workload service account. Set false to
+    bring your own bucket via `gcs_bucket_name` (the two are mutually
+    exclusive).
   EOT
   type        = bool
-  default     = false
+  default     = true
 }
 
 variable "model_cache_location" {

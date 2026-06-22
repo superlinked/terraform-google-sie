@@ -1,6 +1,6 @@
 # SIE GKE Terraform Module
 
-One command to get a GPU-ready GKE cluster for [SIE](https://github.com/superlinked/sie) (Search Inference Engine). The module creates the underlying GCP resources (VPC, GKE, GPU node pools, Artifact Registry, IAM, optional model-cache GCS bucket); the SIE application itself - gateway, sie-config, workers, KEDA, Prometheus, Grafana, Loki, NATS - is deployed on top via the [sie-cluster Helm chart](../../helm/sie-cluster/).
+One command to get a GPU-ready GKE cluster for [SIE](https://github.com/superlinked/sie) (Search Inference Engine). The module creates the underlying GCP resources (VPC, GKE, GPU node pools, Artifact Registry, IAM, a model-cache + payload-store GCS bucket created by default); the SIE application itself - gateway, sie-config, workers, KEDA, Prometheus, Grafana, Loki, NATS - is deployed on top via the [sie-cluster Helm chart](../../helm/sie-cluster/).
 
 - GPU node pools sized for scale-to-zero via KEDA (configured in the Helm chart)
 - Artifact Registry with cleanup policies
@@ -21,7 +21,7 @@ One command to get a GPU-ready GKE cluster for [SIE](https://github.com/superlin
 
 | Layer | Path | What it creates |
 |-------|------|-----------------|
-| **Infrastructure** | `infra/` | GCP resources only: VPC, GKE cluster, node pools, IAM, Artifact Registry, optional model-cache GCS bucket. Can be applied without a running cluster. |
+| **Infrastructure** | `infra/` | GCP resources only: VPC, GKE cluster, node pools, IAM, Artifact Registry, a model-cache + payload-store GCS bucket (created by default). Can be applied without a running cluster. |
 | **Application** | [sie-cluster Helm chart](../../helm/sie-cluster/) | Kubernetes resources: sie-config, gateway, workers, NATS, KEDA, Prometheus, Grafana, Loki, optional ingress + oauth2-proxy. Applied after the cluster is up. |
 
 Examples in `examples/` use the `infra/` submodule directly and deploy K8s resources via the Helm chart in a follow-up step.
@@ -242,7 +242,7 @@ SIE clusters benefit from two object-store backed features that share a single G
 - **Model cache**: pre-staged model weights at `gs://<bucket>/models/`, so workers cold-start from object storage rather than re-downloading from Hugging Face on every pod spin-up.
 - **Payload store**: large work-item payloads (images, long documents that exceed the 1 MiB NATS in-band budget) at `gs://<bucket>/payloads/`, written by the gateway and read once by the worker. Garbage-collected by a runtime TTL plus a bucket lifecycle rule.
 
-Set `create_model_cache = true` and the module:
+Because the payload store is required for >1 MiB work items, the shared bucket is created **by default** (`create_model_cache = true`). With it enabled, the module:
 
 1. Provisions a managed GCS bucket with uniform bucket-level access, public-access prevention enforced, and a lifecycle rule that deletes objects under the `payloads/` prefix after one day (configurable via `model_cache_payload_expiration_days`).
 2. Defines two custom IAM roles (`sie_model_cache_reader`, `sie_payload_store_writer`) with the minimum permission set each side needs.
@@ -258,7 +258,7 @@ helm upgrade --install sie-cluster ../../deploy/helm/sie-cluster \
   $(terraform output -raw model_cache_helm_args)
 ```
 
-The chart auto-derives `payloadStore.url` from `workers.common.clusterCache.url`, so a single `--set` for the cache covers both features. Operators who manage their own bucket can opt out (`create_model_cache = false`, default) and pass `gcs_bucket_name` instead; that path keeps the broader `roles/storage.objectViewer` binding for backward compatibility, but you forgo the prefix-scoped roles and the lifecycle rule.
+The chart auto-derives `payloadStore.url` from `workers.common.clusterCache.url`, so a single `--set` for the cache covers both the optional weights cache (`models/`) and the payload store (`payloads/`); the `payload_store_url` output is exposed for visibility and can be wired explicitly via `--set payloadStore.url=...`. On the chart side `payloadStore.enabled` defaults to `true`, decoupled from the optional `workers.common.clusterCache`. `create_model_cache` (managed bucket) and `gcs_bucket_name` (BYO) are mutually exclusive: to bring your own bucket, set `create_model_cache = false` and pass `gcs_bucket_name` instead; that path keeps the broader `roles/storage.objectViewer` binding for backward compatibility, but you forgo the prefix-scoped roles and the lifecycle rule, and you must wire `payloadStore.url` yourself or work items larger than 1 MiB (e.g. images) fail.
 
 See `infra/gcs_model_cache.tf` and `infra/iam.tf` for the resource definitions and condition expressions.
 

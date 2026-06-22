@@ -86,4 +86,13 @@ resource "google_storage_bucket" "model_cache" {
   }
 
   labels = local.resource_labels
+
+  # create_model_cache now defaults true, so guard the BYO path: a managed
+  # bucket and a caller-supplied gcs_bucket_name are mutually exclusive.
+  lifecycle {
+    precondition {
+      condition     = trimspace(var.gcs_bucket_name) == ""
+      error_message = "create_model_cache=true provisions a managed bucket, but gcs_bucket_name (BYO) is also set. These are mutually exclusive: unset gcs_bucket_name, or set create_model_cache=false to use your BYO bucket."
+    }
+  }
 }
