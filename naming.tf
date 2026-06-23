@@ -1,8 +1,6 @@
 # Centralized naming convention for SIE GCP resources.
-# This file is the single source of truth - read by both Terraform and Python.
-#
-# Terraform: uses local.name_suffixes in infra/main.tf
-# Python: parses this file with python-hcl2 in tools/mise_tasks/cluster.py
+# Single source of truth for resource name suffixes, consumed via
+# local.name_suffixes in infra/main.tf.
 
 locals {
   name_suffixes = {

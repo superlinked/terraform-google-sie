@@ -13,7 +13,7 @@
 #
 # Prerequisites:
 #   1. GCP project with billing enabled
-#   2. GPU quota (check with: gcloud compute regions describe REGION --format='table(quotas.filter(metric:NVIDIA))')
+#   2. GPU quota (check with: gcloud compute regions describe <region>)
 #   3. APIs enabled: container.googleapis.com, compute.googleapis.com
 #
 # Usage:
@@ -82,7 +82,7 @@ variable "deployer_service_account" {
 
 module "infra" {
   source  = "superlinked/sie/google"
-  version = "0.6.10"
+  version = "0.6.11"
 
   project_id               = var.project_id
   region                   = var.region
