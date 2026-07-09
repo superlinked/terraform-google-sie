@@ -121,6 +121,10 @@ Each entry in `gpu_node_pools` supports:
 | `taints` | no | `[]` | Kubernetes taints for GPU isolation |
 | `labels` | no | `{}` | Additional node labels |
 
+For a multi-GPU worker pod, set the node pool `gpu_count` to at least the
+matching Helm `workers.pools.<name>.gpu.count`. Kubernetes can only schedule a
+pod requesting N GPUs onto a node that advertises N allocatable GPUs.
+
 **GPU machine cheat sheet:**
 
 | GPU | Machine Type | VRAM | Approx. spot/hr | Best for |
