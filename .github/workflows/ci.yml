@@ -7,17 +7,18 @@ permissions:
   contents: read
 
 concurrency:
-  group: ci-${{ github.event.pull_request.number }}
+  group: ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
   terraform:
-    name: Terraform
+    name: Terraform lint and validate
     runs-on: blacksmith-2vcpu-ubuntu-2404
     timeout-minutes: 15
     env:
-      TF_IN_AUTOMATION: "true"
       CHECKPOINT_DISABLE: "1"
+      TF_IN_AUTOMATION: "true"
+      TF_INPUT: "false"
     steps:
       - name: Check out repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -40,6 +41,8 @@ jobs:
         run: terraform fmt -check -recursive -diff
 
       - name: Initialize TFLint plugins
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         run: tflint --init
 
       - name: Run TFLint
