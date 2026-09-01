@@ -5,8 +5,8 @@
 
 config {
   # Enable all available rules by default
-  module = true
-  force = false
+  call_module_type = "local"
+  force            = false
 }
 
 # =============================================================================
@@ -15,7 +15,7 @@ config {
 
 plugin "google" {
   enabled = true
-  version = "0.28.0"
+  version = "0.39.0"
   source  = "github.com/terraform-linters/tflint-ruleset-google"
 }
 
@@ -87,8 +87,8 @@ rule "terraform_required_version" {
 # Google Cloud Specific Rules
 # =============================================================================
 
-# Ensure GKE clusters use VPC-native networking
-rule "google_container_cluster_node_pool" {
+# Ensure GKE node pools use valid machine types
+rule "google_container_node_pool_invalid_machine_type" {
   enabled = true
 }
 
