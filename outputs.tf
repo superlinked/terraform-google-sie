@@ -235,6 +235,10 @@ output "kubernetes_token" {
 #
 # Typical deploy sequence after `terraform apply`:
 #   $(terraform output -raw kubectl_config_command)
-#   helm upgrade --install sie-cluster deploy/helm/sie-cluster \
-#     --set global.workloadIdentityAnnotation="$(terraform output -raw workload_identity_annotation)" \
-#     --set global.artifactRegistryUrl="$(terraform output -raw artifact_registry_url)"
+#   curl -fsSL -o values-gke.yaml \
+#     https://raw.githubusercontent.com/superlinked/sie/v0.8.2/deploy/helm/sie-cluster/values-gke.yaml
+#   helm upgrade --install sie-cluster oci://ghcr.io/superlinked/charts/sie-cluster \
+#     --version 0.8.2 -f values-gke.yaml \
+#     --create-namespace -n sie \
+#     --set-string "serviceAccount.annotations.iam\\.gke\\.io/gcp-service-account=$(terraform output -raw workload_identity_annotation)" \
+#     $(terraform output -raw model_cache_helm_args)
