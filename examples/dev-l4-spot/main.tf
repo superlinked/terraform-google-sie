@@ -3,7 +3,7 @@
 # Creates a GKE cluster with GPU nodes. K8s resources (KEDA, Prometheus,
 # SIE application) are deployed via Helm after this terraform apply.
 #
-# See oci://ghcr.io/superlinked/charts/sie-cluster  for the Helm chart.
+# Use chart 0.8.2 from oci://ghcr.io/superlinked/charts/sie-cluster.
 #
 # Features:
 #   - 1x L4 GPU spot pool (scale 0-5)
@@ -24,10 +24,13 @@
 #
 # After apply, deploy K8s resources (batteries-included Helm chart):
 #   $(terraform output -raw kubectl_command)
-#   helm upgrade --install sie-cluster deploy/helm/sie-cluster \
-#     -f values-gke.yaml \
+#   curl -fsSL -o values-gke.yaml \
+#     https://raw.githubusercontent.com/superlinked/sie/v0.8.2/deploy/helm/sie-cluster/values-gke.yaml
+#   helm upgrade --install sie-cluster oci://ghcr.io/superlinked/charts/sie-cluster \
+#     --version 0.8.2 -f values-gke.yaml \
 #     --create-namespace -n sie \
-#     --set serviceAccount.annotations."iam\.gke\.io/gcp-service-account"="$(terraform output -raw sie_workload_service_account)"
+#     --set-string "serviceAccount.annotations.iam\\.gke\\.io/gcp-service-account=$(terraform output -raw sie_workload_service_account)" \
+#     $(terraform output -raw model_cache_helm_args)
 #
 # Cleanup:
 #   helm uninstall sie-cluster
@@ -184,7 +187,17 @@ output "artifact_registry_config_repository_url" {
   value       = module.infra.artifact_registry_config_repository_url
 }
 
+output "sie_workload_service_account" {
+  description = "GCP service account email for the Helm Workload Identity annotation"
+  value       = module.infra.sie_workload_service_account
+}
+
 output "workload_identity_annotation" {
   description = "Annotation for Kubernetes service accounts (Workload Identity)"
   value       = module.infra.workload_identity_annotation
+}
+
+output "model_cache_helm_args" {
+  description = "Helm arguments for the managed model cache and payload store"
+  value       = module.infra.model_cache_helm_args
 }

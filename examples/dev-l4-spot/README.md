@@ -30,12 +30,22 @@ After apply, deploy SIE via Helm:
 # Configure kubectl
 $(terraform output -raw kubectl_command)
 
-# Install SIE (gateway, workers, KEDA, Prometheus, Grafana)
-helm upgrade --install sie-cluster oci://ghcr.io/superlinked/charts/sie-cluster --version 0.7.2 \
-  -f values-gke.yaml \
+# Fetch the overlay from the same SIE release
+curl -fsSL -o values-gke.yaml \
+  https://raw.githubusercontent.com/superlinked/sie/v0.8.2/deploy/helm/sie-cluster/values-gke.yaml
+
+# Install SIE with its published service and CUDA 12 default worker images
+helm upgrade --install sie-cluster oci://ghcr.io/superlinked/charts/sie-cluster \
+  --version 0.8.2 -f values-gke.yaml \
   --create-namespace -n sie \
-  --set serviceAccount.annotations."iam\.gke\.io/gcp-service-account"="$(terraform output -raw workload_identity_annotation)"
+  --set-string "serviceAccount.annotations.iam\\.gke\\.io/gcp-service-account=$(terraform output -raw sie_workload_service_account)" \
+  $(terraform output -raw model_cache_helm_args)
 ```
+
+Chart `0.8.2` selects `v0.8.2` service images and the
+`v0.8.2-cuda12-default` worker image. The Terraform module remains independently
+versioned at `0.7.2`. The cache arguments above also configure the chart's
+required payload-store bucket.
 
 ## Variables
 
@@ -57,7 +67,9 @@ helm upgrade --install sie-cluster oci://ghcr.io/superlinked/charts/sie-cluster 
 | `artifact_registry_server_repository_url` | Push target for `sie-server` images |
 | `artifact_registry_gateway_repository_url` | Push target for `sie-gateway` images |
 | `artifact_registry_config_repository_url` | Push target for `sie-config` images |
-| `workload_identity_annotation` | Annotation for Helm service account |
+| `sie_workload_service_account` | GCP service account email for the Helm Workload Identity annotation |
+| `workload_identity_annotation` | Precomposed `iam.gke.io/gcp-service-account=email` pair |
+| `model_cache_helm_args` | Helm arguments for the managed model cache and payload store |
 
 ## Customizing
 
