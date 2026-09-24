@@ -225,7 +225,7 @@ output "kubernetes_token" {
 #   region                    -> .global.gcp.region
 #   sie_workload_service_account -> .serviceAccount.annotations
 #                                  (iam.gke.io/gcp-service-account)
-#   workload_identity_annotation -> direct annotation value for service account
+#   workload_identity_annotation -> precomposed annotation key=email pair
 #   artifact_registry_url     -> image registry base URL
 #   artifact_registry_*_repository_url -> per-image repository URLs for
 #                                gateway, sie-config, and sie-server
@@ -240,5 +240,5 @@ output "kubernetes_token" {
 #   helm upgrade --install sie-cluster oci://ghcr.io/superlinked/charts/sie-cluster \
 #     --version 0.8.2 -f values-gke.yaml \
 #     --create-namespace -n sie \
-#     --set-string "serviceAccount.annotations.iam\\.gke\\.io/gcp-service-account=$(terraform output -raw workload_identity_annotation)" \
+#     --set-string "serviceAccount.annotations.iam\\.gke\\.io/gcp-service-account=$(terraform output -raw sie_workload_service_account)" \
 #     $(terraform output -raw model_cache_helm_args)

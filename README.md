@@ -51,7 +51,7 @@ curl -fsSL -o values-gke.yaml \
 helm upgrade --install sie-cluster oci://ghcr.io/superlinked/charts/sie-cluster \
   --version 0.8.2 -f values-gke.yaml \
   --create-namespace -n sie \
-  --set-string "serviceAccount.annotations.iam\\.gke\\.io/gcp-service-account=$(terraform output -raw workload_identity_annotation)" \
+  --set-string "serviceAccount.annotations.iam\\.gke\\.io/gcp-service-account=$(terraform output -raw sie_workload_service_account)" \
   $(terraform output -raw model_cache_helm_args)
 ```
 
@@ -183,8 +183,8 @@ After `terraform apply`, use these outputs to connect and deploy:
 | `artifact_registry_server_repository_url` | Where to push `sie-server` images |
 | `artifact_registry_gateway_repository_url` | Where to push `sie-gateway` images |
 | `artifact_registry_config_repository_url` | Where to push `sie-config` images |
-| `sie_workload_service_account` | Pass to Helm for Workload Identity |
-| `workload_identity_annotation` | Direct annotation for K8s service account |
+| `sie_workload_service_account` | GCP service account email for the Helm Workload Identity annotation |
+| `workload_identity_annotation` | Precomposed `iam.gke.io/gcp-service-account=email` pair |
 | `gpu_node_pools` | GPU pool configs (for Helm worker pool mapping) |
 | `gpu_node_pool_disk_sizes_gb` | Boot disk size per configured GPU node pool |
 
@@ -282,7 +282,7 @@ curl -fsSL -o values-gke.yaml \
 helm upgrade --install sie-cluster oci://ghcr.io/superlinked/charts/sie-cluster \
   --version 0.8.2 -f values-gke.yaml \
   --create-namespace -n sie \
-  --set-string "serviceAccount.annotations.iam\\.gke\\.io/gcp-service-account=$(terraform output -raw workload_identity_annotation)" \
+  --set-string "serviceAccount.annotations.iam\\.gke\\.io/gcp-service-account=$(terraform output -raw sie_workload_service_account)" \
   $(terraform output -raw model_cache_helm_args)
 ```
 

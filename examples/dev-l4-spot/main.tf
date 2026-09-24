@@ -29,7 +29,7 @@
 #   helm upgrade --install sie-cluster oci://ghcr.io/superlinked/charts/sie-cluster \
 #     --version 0.8.2 -f values-gke.yaml \
 #     --create-namespace -n sie \
-#     --set-string "serviceAccount.annotations.iam\\.gke\\.io/gcp-service-account=$(terraform output -raw workload_identity_annotation)" \
+#     --set-string "serviceAccount.annotations.iam\\.gke\\.io/gcp-service-account=$(terraform output -raw sie_workload_service_account)" \
 #     $(terraform output -raw model_cache_helm_args)
 #
 # Cleanup:
@@ -185,6 +185,11 @@ output "artifact_registry_gateway_repository_url" {
 output "artifact_registry_config_repository_url" {
   description = "Artifact Registry image repository URL for sie-config images"
   value       = module.infra.artifact_registry_config_repository_url
+}
+
+output "sie_workload_service_account" {
+  description = "GCP service account email for the Helm Workload Identity annotation"
+  value       = module.infra.sie_workload_service_account
 }
 
 output "workload_identity_annotation" {
