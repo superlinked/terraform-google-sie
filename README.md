@@ -55,6 +55,10 @@ helm upgrade --install sie-cluster oci://ghcr.io/superlinked/charts/sie-cluster 
   $(terraform output -raw model_cache_helm_args)
 ```
 
+For existing installations with custom model profiles, review the
+[SIE 0.8.0 breaking changes](https://github.com/superlinked/sie/releases/tag/v0.8.0)
+for adapter options and launch arguments before upgrading.
+
 ## Examples
 
 | Example | GPU | Description |
@@ -234,17 +238,17 @@ into your Artifact Registry, preserving their versioned tags:
 gcloud auth configure-docker $(terraform output -raw artifact_registry_url | cut -d/ -f1)
 
 # Mirror the GKE overlay's default CUDA 12 worker image
-docker pull ghcr.io/superlinked/sie-server:v0.8.2-cuda12-default
+docker pull --platform linux/amd64 ghcr.io/superlinked/sie-server:v0.8.2-cuda12-default
 docker tag ghcr.io/superlinked/sie-server:v0.8.2-cuda12-default "$(terraform output -raw artifact_registry_server_repository_url):v0.8.2-cuda12-default"
 docker push "$(terraform output -raw artifact_registry_server_repository_url):v0.8.2-cuda12-default"
 
 # Mirror the gateway image
-docker pull ghcr.io/superlinked/sie-gateway:v0.8.2
+docker pull --platform linux/amd64 ghcr.io/superlinked/sie-gateway:v0.8.2
 docker tag ghcr.io/superlinked/sie-gateway:v0.8.2 "$(terraform output -raw artifact_registry_gateway_repository_url):v0.8.2"
 docker push "$(terraform output -raw artifact_registry_gateway_repository_url):v0.8.2"
 
 # Mirror the configuration-service image
-docker pull ghcr.io/superlinked/sie-config:v0.8.2
+docker pull --platform linux/amd64 ghcr.io/superlinked/sie-config:v0.8.2
 docker tag ghcr.io/superlinked/sie-config:v0.8.2 "$(terraform output -raw artifact_registry_config_repository_url):v0.8.2"
 docker push "$(terraform output -raw artifact_registry_config_repository_url):v0.8.2"
 ```
