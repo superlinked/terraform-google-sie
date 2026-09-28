@@ -1,6 +1,6 @@
 # SIE GKE Terraform Module
 
-One command to get a GPU-ready GKE cluster for [SIE](https://github.com/superlinked/sie) (Search Inference Engine). The module creates the underlying GCP resources (VPC, GKE, GPU node pools, Artifact Registry, IAM, a model-cache + payload-store GCS bucket created by default); the SIE application itself - gateway, sie-config, workers, KEDA, Prometheus, Grafana, Loki, NATS - is deployed on top via the [sie-cluster Helm chart](https://github.com/superlinked/sie/tree/v0.8.2/deploy/helm/sie-cluster).
+One command to get a GPU-ready GKE cluster for [SIE](https://github.com/superlinked/sie) (Search Inference Engine). The module creates the underlying GCP resources (VPC, GKE, GPU node pools, Artifact Registry, IAM, a model-cache + payload-store GCS bucket created by default); the SIE application itself - gateway, sie-config, workers, KEDA, Prometheus, Grafana, Loki, NATS - is deployed on top via the [sie-cluster Helm chart](https://github.com/superlinked/sie/tree/v0.8.3/deploy/helm/sie-cluster).
 
 - GPU node pools sized for scale-to-zero via KEDA (configured in the Helm chart)
 - Artifact Registry with cleanup policies
@@ -22,7 +22,7 @@ One command to get a GPU-ready GKE cluster for [SIE](https://github.com/superlin
 | Layer | Path | What it creates |
 |-------|------|-----------------|
 | **Infrastructure** | `infra/` | GCP resources only: VPC, GKE cluster, node pools, IAM, Artifact Registry, a model-cache + payload-store GCS bucket (created by default). Can be applied without a running cluster. |
-| **Application** | [sie-cluster Helm chart](https://github.com/superlinked/sie/tree/v0.8.2/deploy/helm/sie-cluster) | Kubernetes resources: sie-config, gateway, workers, NATS, KEDA, Prometheus, Grafana, Loki, optional ingress + oauth2-proxy. Applied after the cluster is up. |
+| **Application** | [sie-cluster Helm chart](https://github.com/superlinked/sie/tree/v0.8.3/deploy/helm/sie-cluster) | Kubernetes resources: sie-config, gateway, workers, NATS, KEDA, Prometheus, Grafana, Loki, optional ingress + oauth2-proxy. Applied after the cluster is up. |
 
 Examples in `examples/` use the `infra/` submodule directly and deploy K8s resources via the Helm chart in a follow-up step.
 
@@ -36,8 +36,8 @@ terraform plan
 terraform apply
 ```
 
-After apply, configure kubectl and deploy SIE with chart `0.8.2`. The chart
-selects the published `v0.8.2` service images and `v0.8.2-cuda12-default`
+After apply, configure kubectl and deploy SIE with chart `0.8.3`. The chart
+selects the published `v0.8.3` service images and `v0.8.3-cuda12-default`
 worker image for the GKE overlay. The Terraform module version is independent
 of the SIE application version:
 
@@ -47,9 +47,9 @@ $(terraform output -raw kubectl_command)
 
 # Fetch the matching GKE overlay and deploy the published chart
 curl -fsSL -o values-gke.yaml \
-  https://raw.githubusercontent.com/superlinked/sie/v0.8.2/deploy/helm/sie-cluster/values-gke.yaml
+  https://raw.githubusercontent.com/superlinked/sie/v0.8.3/deploy/helm/sie-cluster/values-gke.yaml
 helm upgrade --install sie-cluster oci://ghcr.io/superlinked/charts/sie-cluster \
-  --version 0.8.2 -f values-gke.yaml \
+  --version 0.8.3 -f values-gke.yaml \
   --create-namespace -n sie \
   --set-string "serviceAccount.annotations.iam\\.gke\\.io/gcp-service-account=$(terraform output -raw sie_workload_service_account)" \
   $(terraform output -raw model_cache_helm_args)
@@ -168,7 +168,7 @@ pod requesting N GPUs onto a node that advertises N allocatable GPUs.
 
 ### Application layer
 
-The `infra/` module only creates GCP resources (VPC, GKE, node pools, IAM, Artifact Registry). The SIE application - gateway, sie-config, workers, observability stack, NATS, optional ingress + auth - is deployed separately via the [sie-cluster Helm chart](https://github.com/superlinked/sie/tree/v0.8.2/deploy/helm/sie-cluster). All `install_*`, `sie_*`, and `nats_*` knobs live on the Helm values file (see the [0.8.2 chart values](https://github.com/superlinked/sie/blob/v0.8.2/deploy/helm/sie-cluster/values.yaml)), not on this Terraform module.
+The `infra/` module only creates GCP resources (VPC, GKE, node pools, IAM, Artifact Registry). The SIE application - gateway, sie-config, workers, observability stack, NATS, optional ingress + auth - is deployed separately via the [sie-cluster Helm chart](https://github.com/superlinked/sie/tree/v0.8.3/deploy/helm/sie-cluster). All `install_*`, `sie_*`, and `nats_*` knobs live on the Helm values file (see the [0.8.3 chart values](https://github.com/superlinked/sie/blob/v0.8.3/deploy/helm/sie-cluster/values.yaml)), not on this Terraform module.
 
 ## Outputs
 
@@ -238,26 +238,26 @@ into your Artifact Registry, preserving their versioned tags:
 gcloud auth configure-docker $(terraform output -raw artifact_registry_url | cut -d/ -f1)
 
 # Mirror the GKE overlay's default CUDA 12 worker image
-docker pull --platform linux/amd64 ghcr.io/superlinked/sie-server:v0.8.2-cuda12-default
-docker tag ghcr.io/superlinked/sie-server:v0.8.2-cuda12-default "$(terraform output -raw artifact_registry_server_repository_url):v0.8.2-cuda12-default"
-docker push "$(terraform output -raw artifact_registry_server_repository_url):v0.8.2-cuda12-default"
+docker pull --platform linux/amd64 ghcr.io/superlinked/sie-server:v0.8.3-cuda12-default
+docker tag ghcr.io/superlinked/sie-server:v0.8.3-cuda12-default "$(terraform output -raw artifact_registry_server_repository_url):v0.8.3-cuda12-default"
+docker push "$(terraform output -raw artifact_registry_server_repository_url):v0.8.3-cuda12-default"
 
 # Mirror the gateway image
-docker pull --platform linux/amd64 ghcr.io/superlinked/sie-gateway:v0.8.2
-docker tag ghcr.io/superlinked/sie-gateway:v0.8.2 "$(terraform output -raw artifact_registry_gateway_repository_url):v0.8.2"
-docker push "$(terraform output -raw artifact_registry_gateway_repository_url):v0.8.2"
+docker pull --platform linux/amd64 ghcr.io/superlinked/sie-gateway:v0.8.3
+docker tag ghcr.io/superlinked/sie-gateway:v0.8.3 "$(terraform output -raw artifact_registry_gateway_repository_url):v0.8.3"
+docker push "$(terraform output -raw artifact_registry_gateway_repository_url):v0.8.3"
 
 # Mirror the configuration-service image
-docker pull --platform linux/amd64 ghcr.io/superlinked/sie-config:v0.8.2
-docker tag ghcr.io/superlinked/sie-config:v0.8.2 "$(terraform output -raw artifact_registry_config_repository_url):v0.8.2"
-docker push "$(terraform output -raw artifact_registry_config_repository_url):v0.8.2"
+docker pull --platform linux/amd64 ghcr.io/superlinked/sie-config:v0.8.3
+docker tag ghcr.io/superlinked/sie-config:v0.8.3 "$(terraform output -raw artifact_registry_config_repository_url):v0.8.3"
+docker push "$(terraform output -raw artifact_registry_config_repository_url):v0.8.3"
 ```
 
 Set `workers.common.image.repository`, `gateway.image.repository`, and
 `config.image.repository` to the corresponding Artifact Registry outputs when
-installing the chart. Leave their tags unset so chart `0.8.2` selects the tags
+installing the chart. Leave their tags unset so chart `0.8.3` selects the tags
 above; it appends `-cuda12-default` to the worker tag. The sidecar continues to
-use `ghcr.io/superlinked/sie-server-sidecar:v0.8.2`. If you enable additional
+use `ghcr.io/superlinked/sie-server-sidecar:v0.8.3`. If you enable additional
 worker bundles or platforms, mirror each matching versioned image before
 overriding the common worker repository.
 
@@ -278,9 +278,9 @@ After apply, pass the bucket into Helm with one terraform output:
 
 ```bash
 curl -fsSL -o values-gke.yaml \
-  https://raw.githubusercontent.com/superlinked/sie/v0.8.2/deploy/helm/sie-cluster/values-gke.yaml
+  https://raw.githubusercontent.com/superlinked/sie/v0.8.3/deploy/helm/sie-cluster/values-gke.yaml
 helm upgrade --install sie-cluster oci://ghcr.io/superlinked/charts/sie-cluster \
-  --version 0.8.2 -f values-gke.yaml \
+  --version 0.8.3 -f values-gke.yaml \
   --create-namespace -n sie \
   --set-string "serviceAccount.annotations.iam\\.gke\\.io/gcp-service-account=$(terraform output -raw sie_workload_service_account)" \
   $(terraform output -raw model_cache_helm_args)
@@ -314,7 +314,7 @@ Some pieces of a production deployment are intentionally not turnkey - either be
   - `cert-manager` - install cert-manager once in the cluster; the chart annotates the Ingress for automated Let's Encrypt issuance via HTTP-01.
   - `self-signed` - for air-gapped clusters; set `certManagerBundle.certManager.install: true` to bundle cert-manager (single-tenant clusters only).
 
-  See the [chart README's TLS / HTTPS section](https://github.com/superlinked/sie/blob/v0.8.2/deploy/helm/sie-cluster/README.md#tls--https). DNS-01 / wildcard / Google-managed certificate paths are out of scope for the chart.
+  See the [chart README's TLS / HTTPS section](https://github.com/superlinked/sie/blob/v0.8.3/deploy/helm/sie-cluster/README.md#tls--https). DNS-01 / wildcard / Google-managed certificate paths are out of scope for the chart.
 - **DNS / domain** - always BYO. This module does not provision Cloud DNS zones or records. After `terraform apply`, take the ingress controller's LoadBalancer IP (`kubectl -n ingress-nginx get svc ingress-nginx-controller`) and create an A/AAAA record pointing at it under a domain you control.
 - **OIDC provider** - BYO. When `auth.enabled: true` in the chart, set `auth.oauth2Proxy.oidcIssuerUrl` and the corresponding client ID / secret to your existing identity provider (Okta, Auth0, Google Workspace, Azure AD, ...). The module does not create an IdP.
 
