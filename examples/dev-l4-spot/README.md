@@ -32,18 +32,18 @@ $(terraform output -raw kubectl_command)
 
 # Fetch the overlay from the same SIE release
 curl -fsSL -o values-gke.yaml \
-  https://raw.githubusercontent.com/superlinked/sie/v0.8.2/deploy/helm/sie-cluster/values-gke.yaml
+  https://raw.githubusercontent.com/superlinked/sie/v0.8.3/deploy/helm/sie-cluster/values-gke.yaml
 
 # Install SIE with its published service and CUDA 12 default worker images
 helm upgrade --install sie-cluster oci://ghcr.io/superlinked/charts/sie-cluster \
-  --version 0.8.2 -f values-gke.yaml \
+  --version 0.8.3 -f values-gke.yaml \
   --create-namespace -n sie \
   --set-string "serviceAccount.annotations.iam\\.gke\\.io/gcp-service-account=$(terraform output -raw sie_workload_service_account)" \
   $(terraform output -raw model_cache_helm_args)
 ```
 
-Chart `0.8.2` selects `v0.8.2` service images and the
-`v0.8.2-cuda12-default` worker image. The Terraform module remains independently
+Chart `0.8.3` selects `v0.8.3` service images and the
+`v0.8.3-cuda12-default` worker image. The Terraform module remains independently
 versioned at `0.7.2`. The cache arguments above also configure the chart's
 required payload-store bucket.
 
