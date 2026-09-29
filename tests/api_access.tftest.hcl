@@ -227,6 +227,42 @@ run "private_endpoint_disables_public_endpoint" {
   }
 }
 
+run "rejects_rfc1918_ranges_on_public_endpoint_without_opt_in" {
+  command = plan
+
+  variables {
+    authorized_networks = [
+      { cidr_block = "10.0.0.0/8", display_name = "rfc1918-10" },
+      { cidr_block = "172.16.0.0/12", display_name = "rfc1918-172" },
+      { cidr_block = "192.168.0.0/16", display_name = "rfc1918-192" },
+    ]
+  }
+
+  expect_failures = [var.authorized_networks]
+}
+
+run "private_endpoint_accepts_all_rfc1918_ranges" {
+  command = plan
+
+  variables {
+    enable_private_endpoint = true
+    authorized_networks = [
+      { cidr_block = "10.0.0.0/8", display_name = "rfc1918-10" },
+      { cidr_block = "172.16.0.0/12", display_name = "rfc1918-172" },
+      { cidr_block = "192.168.0.0/16", display_name = "rfc1918-192" },
+    ]
+  }
+
+  assert {
+    condition = (
+      google_container_cluster.primary.private_cluster_config[0].enable_private_endpoint == true
+      && length(google_container_cluster.primary.master_authorized_networks_config[0].cidr_blocks) == 3
+      && google_container_cluster.primary.master_authorized_networks_config[0].private_endpoint_enforcement_enabled == true
+    )
+    error_message = "Private-endpoint mode should accept internal ranges beyond one /8 in total without allow_public_api_server"
+  }
+}
+
 run "private_endpoint_enforces_listed_networks" {
   command = plan
 

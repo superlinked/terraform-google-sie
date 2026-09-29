@@ -182,9 +182,12 @@ Rules for `authorized_networks`:
 
 - Entries must be IPv4 CIDR blocks, because the module creates an IPv4 cluster.
 - At most 100 entries, the GKE limit on authorized networks.
-- Together the entries may cover at most 16,777,216 addresses, the size of one
-  `/8`. `0.0.0.0/0`, split halves such as two `/1` blocks, and several broad
-  ranges are rejected unless `allow_public_api_server = true`.
+- With the public endpoint enabled, the entries together may cover at most
+  16,777,216 addresses, the size of one `/8`. `0.0.0.0/0`, split halves such as
+  two `/1` blocks, and several broad ranges are rejected unless
+  `allow_public_api_server = true`. In private-endpoint mode the list holds
+  internal ranges (for example all three RFC 1918 ranges) and has no total
+  limit.
 - Entries inside a documentation range (`192.0.2.0/24`, `198.51.100.0/24`,
   `203.0.113.0/24`) are rejected, so an unedited placeholder fails at plan
   time. Broader entries that contain one need `allow_public_api_server = true`.

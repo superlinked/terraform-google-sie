@@ -103,7 +103,7 @@ variable "master_ipv4_cidr_block" {
 }
 
 variable "authorized_networks" {
-  description = "IPv4 CIDR blocks authorized to reach the Kubernetes API (master authorized networks), at most 100. Include every machine that runs kubectl or helm against the cluster. The list applies to the public endpoint, and also to the private endpoint when enable_private_endpoint = true. Leave empty only with enable_private_endpoint = true or allow_public_api_server = true. Together the ranges may cover at most 16,777,216 addresses (one /8) unless allow_public_api_server = true. Entries inside a documentation range (192.0.2.0/24, 198.51.100.0/24, 203.0.113.0/24) are rejected, and broader entries that contain one need allow_public_api_server = true."
+  description = "IPv4 CIDR blocks authorized to reach the Kubernetes API (master authorized networks), at most 100. Include every machine that runs kubectl or helm against the cluster. The list applies to the public endpoint, and also to the private endpoint when enable_private_endpoint = true. Leave empty only with enable_private_endpoint = true or allow_public_api_server = true. With the public endpoint enabled, the ranges together may cover at most 16,777,216 addresses (one /8) unless allow_public_api_server = true; in private-endpoint mode the list holds internal ranges and has no total limit. Entries inside a documentation range (192.0.2.0/24, 198.51.100.0/24, 203.0.113.0/24) are rejected, and broader entries that contain one need allow_public_api_server = true."
   type = list(object({
     cidr_block   = string
     display_name = string
@@ -136,11 +136,11 @@ variable "authorized_networks" {
   }
 
   validation {
-    condition = var.allow_public_api_server || try(
+    condition = var.allow_public_api_server || var.enable_private_endpoint || try(
       sum(concat([0], [for network in var.authorized_networks : pow(2, 32 - tonumber(split("/", network.cidr_block)[1]))])) <= pow(2, 24),
       false
     )
-    error_message = "authorized_networks covers more than 16,777,216 addresses (one /8) in total, for example 0.0.0.0/0 or several broad ranges. List the specific ranges that need API access, or set allow_public_api_server = true to accept any Internet address."
+    error_message = "With the public endpoint enabled, authorized_networks covers more than 16,777,216 addresses (one /8) in total, for example 0.0.0.0/0 or several broad ranges. List the specific ranges that need API access, set enable_private_endpoint = true if the list holds internal ranges for the private endpoint, or set allow_public_api_server = true to accept any Internet address."
   }
 
   validation {
