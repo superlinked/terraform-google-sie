@@ -185,8 +185,9 @@ Rules for `authorized_networks`:
 - Together the entries may cover at most 16,777,216 addresses, the size of one
   `/8`. `0.0.0.0/0`, split halves such as two `/1` blocks, and several broad
   ranges are rejected unless `allow_public_api_server = true`.
-- Documentation ranges (`192.0.2.0/24`, `198.51.100.0/24`, `203.0.113.0/24`)
-  are rejected, so an unedited placeholder fails at plan time.
+- Entries inside a documentation range (`192.0.2.0/24`, `198.51.100.0/24`,
+  `203.0.113.0/24`) are rejected, so an unedited placeholder fails at plan
+  time. Broader entries that contain one need `allow_public_api_server = true`.
 
 In the public-endpoint mode the list does not restrict the private endpoint,
 which stays reachable from the cluster's VPC network in its region. When master

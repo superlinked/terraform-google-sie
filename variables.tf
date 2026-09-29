@@ -103,7 +103,7 @@ variable "master_ipv4_cidr_block" {
 }
 
 variable "authorized_networks" {
-  description = "IPv4 CIDR blocks authorized to reach the Kubernetes API (master authorized networks), at most 100. Include every machine that runs kubectl or helm against the cluster. The list applies to the public endpoint, and also to the private endpoint when enable_private_endpoint = true. Leave empty only with enable_private_endpoint = true or allow_public_api_server = true. Together the ranges may cover at most 16,777,216 addresses (one /8) unless allow_public_api_server = true. Documentation ranges (192.0.2.0/24, 198.51.100.0/24, 203.0.113.0/24) are rejected."
+  description = "IPv4 CIDR blocks authorized to reach the Kubernetes API (master authorized networks), at most 100. Include every machine that runs kubectl or helm against the cluster. The list applies to the public endpoint, and also to the private endpoint when enable_private_endpoint = true. Leave empty only with enable_private_endpoint = true or allow_public_api_server = true. Together the ranges may cover at most 16,777,216 addresses (one /8) unless allow_public_api_server = true. Entries inside a documentation range (192.0.2.0/24, 198.51.100.0/24, 203.0.113.0/24) are rejected, and broader entries that contain one need allow_public_api_server = true."
   type = list(object({
     cidr_block   = string
     display_name = string
@@ -124,12 +124,15 @@ variable "authorized_networks" {
   validation {
     condition = alltrue([
       for network in var.authorized_networks : !try(
-        tonumber(split("/", network.cidr_block)[1]) >= 24
-        && contains(["192.0.2", "198.51.100", "203.0.113"], join(".", slice(split(".", cidrhost(network.cidr_block, 0)), 0, 3))),
+        (tonumber(split("/", network.cidr_block)[1]) >= 24 || !var.allow_public_api_server)
+        && anytrue([
+          for doc in ["192.0.2.0", "198.51.100.0", "203.0.113.0"] :
+          cidrhost("${cidrhost(network.cidr_block, 0)}/${min(tonumber(split("/", network.cidr_block)[1]), 24)}", 0) == cidrhost("${doc}/${min(tonumber(split("/", network.cidr_block)[1]), 24)}", 0)
+        ]),
         false
       )
     ])
-    error_message = "authorized_networks contains a documentation range (192.0.2.0/24, 198.51.100.0/24, or 203.0.113.0/24), such as the README placeholder. Replace it with the real egress address of the machines that need API access."
+    error_message = "authorized_networks overlaps a documentation range (192.0.2.0/24, 198.51.100.0/24, or 203.0.113.0/24), such as the README placeholder. Replace it with the real egress address of the machines that need API access. A broader range that contains a documentation range needs allow_public_api_server = true."
   }
 
   validation {

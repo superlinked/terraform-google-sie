@@ -111,6 +111,27 @@ run "rejects_documentation_placeholder" {
   expect_failures = [var.authorized_networks]
 }
 
+run "rejects_documentation_placeholder_even_with_opt_in" {
+  command = plan
+
+  variables {
+    allow_public_api_server = true
+    authorized_networks     = [{ cidr_block = "203.0.113.10/32", display_name = "placeholder" }]
+  }
+
+  expect_failures = [var.authorized_networks]
+}
+
+run "rejects_range_containing_documentation_range" {
+  command = plan
+
+  variables {
+    authorized_networks = [{ cidr_block = "203.0.112.0/23", display_name = "wide" }]
+  }
+
+  expect_failures = [var.authorized_networks]
+}
+
 run "rejects_more_than_100_networks" {
   command = plan
 
