@@ -154,7 +154,8 @@ resource "google_container_cluster" "primary" {
   dynamic "master_authorized_networks_config" {
     for_each = var.allow_public_api_server && length(var.authorized_networks) == 0 ? [] : [1]
     content {
-      gcp_public_cidrs_access_enabled = false
+      gcp_public_cidrs_access_enabled      = false
+      private_endpoint_enforcement_enabled = var.enable_private_endpoint && length(var.authorized_networks) > 0 ? true : null
 
       dynamic "cidr_blocks" {
         for_each = var.authorized_networks

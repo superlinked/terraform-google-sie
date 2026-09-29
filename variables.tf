@@ -130,7 +130,7 @@ variable "authorized_networks" {
 }
 
 variable "enable_private_endpoint" {
-  description = "Serve the Kubernetes API only on the private endpoint inside the VPC and disable the public endpoint. Requires enable_private_nodes. kubectl and helm must then run from a network that reaches the VPC; authorized_networks can list those internal ranges."
+  description = "Serve the Kubernetes API only on the private endpoint inside the VPC and disable the public endpoint. Requires enable_private_nodes. kubectl and helm must then run from a network that reaches the VPC. A non-empty authorized_networks is then enforced on the private endpoint, so list those internal ranges; with an empty list any address in the VPC network can reach it."
   type        = bool
   default     = false
 

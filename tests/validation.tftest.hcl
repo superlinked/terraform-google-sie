@@ -179,6 +179,23 @@ run "validate_private_endpoint" {
   }
 }
 
+run "validate_private_endpoint_enforces_authorized_networks" {
+  command = plan
+
+  variables {
+    project_id              = "test-project"
+    cluster_name            = "sie-test"
+    region                  = "us-central1"
+    enable_private_endpoint = true
+    authorized_networks     = [{ cidr_block = "10.8.0.0/16", display_name = "vpn" }]
+  }
+
+  assert {
+    condition     = google_container_cluster.primary.master_authorized_networks_config[0].private_endpoint_enforcement_enabled == true
+    error_message = "Authorized networks should be enforced on the private endpoint when listed in private-endpoint mode"
+  }
+}
+
 # =============================================================================
 # Security Validation Tests
 # =============================================================================
