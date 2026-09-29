@@ -184,7 +184,7 @@ output "gpu_node_pools" {
 
 output "kubectl_config_command" {
   description = "Command to configure kubectl for this cluster"
-  value       = "gcloud container clusters get-credentials ${google_container_cluster.primary.name} --region ${var.region} --project ${var.project_id}"
+  value       = "gcloud container clusters get-credentials ${google_container_cluster.primary.name} --region ${var.region} --project ${var.project_id}${var.enable_private_endpoint ? " --internal-ip" : ""}"
 }
 
 # =============================================================================

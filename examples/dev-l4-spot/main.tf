@@ -18,6 +18,10 @@
 #
 # Usage:
 #   export TF_VAR_project_id="your-project-id"
+#   # CIDRs allowed to reach the Kubernetes API. Include the address this
+#   # machine uses to reach the Internet, for example the /32 of
+#   # `curl -s https://checkip.amazonaws.com`.
+#   export TF_VAR_api_server_authorized_ip_ranges='["203.0.113.10/32"]'
 #   terraform init
 #   terraform plan
 #   terraform apply
@@ -79,13 +83,17 @@ variable "deployer_service_account" {
   default     = ""
 }
 
+variable "api_server_authorized_ip_ranges" {
+  description = "CIDR blocks allowed to reach the Kubernetes API, such as [\"203.0.113.10/32\"]. Include the egress address of the machine that runs kubectl and helm."
+  type        = list(string)
+}
+
 # =============================================================================
 # SIE GKE Infra Module
 # =============================================================================
 
 module "infra" {
-  source  = "superlinked/sie/google"
-  version = "0.7.2"
+  source = "../.."
 
   project_id               = var.project_id
   region                   = var.region
@@ -100,6 +108,11 @@ module "infra" {
 
   # Private cluster with NAT
   enable_private_nodes = true
+
+  # Kubernetes API reachable only from the listed ranges
+  authorized_networks = [
+    for cidr in var.api_server_authorized_ip_ranges : { cidr_block = cidr, display_name = "operator" }
+  ]
 
   # Node Auto-Provisioning (NAP)
   enable_node_auto_provisioning = true

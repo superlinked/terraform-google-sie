@@ -145,14 +145,17 @@ resource "google_container_cluster" "primary" {
   # Private cluster configuration
   private_cluster_config {
     enable_private_nodes    = var.enable_private_nodes
-    enable_private_endpoint = false # Allow public access to master
+    enable_private_endpoint = var.enable_private_endpoint
     master_ipv4_cidr_block  = var.enable_private_nodes ? var.master_ipv4_cidr_block : null
   }
 
-  # Master authorized networks
+  # Master authorized networks. An empty cidr_blocks list admits no external
+  # address; only allow_public_api_server leaves the endpoint unrestricted.
   dynamic "master_authorized_networks_config" {
-    for_each = length(var.authorized_networks) > 0 ? [1] : []
+    for_each = var.allow_public_api_server && length(var.authorized_networks) == 0 ? [] : [1]
     content {
+      gcp_public_cidrs_access_enabled = false
+
       dynamic "cidr_blocks" {
         for_each = var.authorized_networks
         content {
