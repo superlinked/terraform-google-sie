@@ -174,7 +174,7 @@ it. The plan fails until you choose one mode:
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `authorized_networks` | `[]` | CIDRs (with display names) allowed to reach the Kubernetes API through master authorized networks. Include every machine that runs `kubectl` or `helm` against the cluster. |
-| `enable_private_endpoint` | `false` | Disable the public endpoint and serve the API only on the private endpoint inside the VPC. Requires `enable_private_nodes`. A non-empty `authorized_networks` (for example a VPN range) is then enforced on the private endpoint; with an empty list any address in the VPC network can reach it. |
+| `enable_private_endpoint` | `false` | Disable the public endpoint and serve the API only on the private endpoint inside the VPC. Requires `enable_private_nodes`. A non-empty `authorized_networks` (for example a VPN range) is then enforced on the private endpoint; with an empty list any address in the VPC network can reach it. Enforcement needs a control plane at GKE `1.28.10-gke.1058000` or later with Envoy enabled; otherwise GKE rejects the update and access stays unchanged. |
 | `allow_public_api_server` | `false` | Explicit opt-in to accept any Internet address. With an empty `authorized_networks` the module leaves master authorized networks unmanaged. |
 
 Ranges broader than `/8` (IPv4) or `/16` (IPv6), including `0.0.0.0/0` and
