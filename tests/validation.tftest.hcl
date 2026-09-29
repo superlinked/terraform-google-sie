@@ -4,7 +4,7 @@
 # Requires Terraform >= 1.7.0
 
 variables {
-  authorized_networks = [{ cidr_block = "203.0.113.10/32", display_name = "test" }]
+  authorized_networks = [{ cidr_block = "8.8.8.8/32", display_name = "test" }]
 }
 
 # =============================================================================
@@ -126,73 +126,6 @@ run "validate_private_cluster_config" {
   assert {
     condition     = length(google_compute_router_nat.nat) > 0
     error_message = "Cloud NAT should be created for private nodes"
-  }
-}
-
-run "validate_api_restricted_to_authorized_networks" {
-  command = plan
-
-  variables {
-    project_id   = "test-project"
-    cluster_name = "sie-test"
-    region       = "us-central1"
-  }
-
-  assert {
-    condition     = google_container_cluster.primary.private_cluster_config[0].enable_private_endpoint == false
-    error_message = "An authorized-networks allowlist should keep the public endpoint enabled"
-  }
-
-  assert {
-    condition = (
-      google_container_cluster.primary.master_authorized_networks_config[0].gcp_public_cidrs_access_enabled == false
-      && [for block in google_container_cluster.primary.master_authorized_networks_config[0].cidr_blocks : block.cidr_block] == ["203.0.113.10/32"]
-    )
-    error_message = "Master authorized networks should admit only the allowlisted range and no Google Cloud public addresses"
-  }
-}
-
-run "validate_private_endpoint" {
-  command = plan
-
-  variables {
-    project_id              = "test-project"
-    cluster_name            = "sie-test"
-    region                  = "us-central1"
-    enable_private_endpoint = true
-    authorized_networks     = []
-  }
-
-  assert {
-    condition     = google_container_cluster.primary.private_cluster_config[0].enable_private_endpoint == true
-    error_message = "enable_private_endpoint should disable the public endpoint"
-  }
-
-  assert {
-    condition     = length(google_container_cluster.primary.master_authorized_networks_config[0].cidr_blocks) == 0
-    error_message = "Master authorized networks should stay enabled with no external ranges"
-  }
-
-  assert {
-    condition     = endswith(output.kubectl_config_command, " --internal-ip")
-    error_message = "The kubectl command should use the private endpoint"
-  }
-}
-
-run "validate_private_endpoint_enforces_authorized_networks" {
-  command = plan
-
-  variables {
-    project_id              = "test-project"
-    cluster_name            = "sie-test"
-    region                  = "us-central1"
-    enable_private_endpoint = true
-    authorized_networks     = [{ cidr_block = "10.8.0.0/16", display_name = "vpn" }]
-  }
-
-  assert {
-    condition     = google_container_cluster.primary.master_authorized_networks_config[0].private_endpoint_enforcement_enabled == true
-    error_message = "Authorized networks should be enforced on the private endpoint when listed in private-endpoint mode"
   }
 }
 

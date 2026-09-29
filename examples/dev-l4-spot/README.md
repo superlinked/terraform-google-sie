@@ -18,8 +18,8 @@ Creates a minimal GKE cluster with a single L4 GPU spot node pool - ideal for de
 
 The Kubernetes API endpoint accepts only the CIDRs you list. Include the
 address the machine running kubectl and Helm uses to reach the Internet.
-`203.0.113.10/32` below is a documentation placeholder; replace it with your
-own range.
+`203.0.113.10/32` below is a documentation placeholder. The module rejects
+documentation ranges, so replace it with your own address.
 
 ```bash
 export TF_VAR_project_id="your-gcp-project-id"

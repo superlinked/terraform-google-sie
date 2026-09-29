@@ -39,7 +39,8 @@ terraform plan
 terraform apply
 ```
 
-`203.0.113.10/32` is a documentation placeholder. See
+`203.0.113.10/32` is a documentation placeholder. The module rejects
+documentation ranges, so replace it with your own address. See
 [Kubernetes API access](#kubernetes-api-access) for the private-endpoint mode.
 
 After apply, configure kubectl and deploy SIE with chart `0.8.3`. The chart
@@ -173,25 +174,43 @@ it. The plan fails until you choose one mode:
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `authorized_networks` | `[]` | CIDRs (with display names) allowed to reach the Kubernetes API through master authorized networks. Include every machine that runs `kubectl` or `helm` against the cluster. |
-| `enable_private_endpoint` | `false` | Disable the public endpoint and serve the API only on the private endpoint inside the VPC. Requires `enable_private_nodes`. A non-empty `authorized_networks` (for example a VPN range) is then enforced on the private endpoint; with an empty list any address in the VPC network can reach it. Enforcement needs a control plane at GKE `1.28.10-gke.1058000` or later with Envoy enabled; otherwise GKE rejects the update and access stays unchanged. |
+| `authorized_networks` | `[]` | CIDRs (with display names) allowed to reach the Kubernetes API through master authorized networks. Include every machine that runs `kubectl` or `helm` against the cluster. The list restricts the public endpoint, and also the private endpoint in private-endpoint mode. |
+| `enable_private_endpoint` | `false` | Disable the public endpoint and serve the API only on the private endpoint. Requires `enable_private_nodes`. The private endpoint is reachable from the cluster's VPC network in the cluster's region; this module does not enable access from other regions. A non-empty `authorized_networks` (for example a VPN range) is then also enforced on the private endpoint; with an empty list any address that reaches the private endpoint is admitted. Enforcement needs a control plane at GKE `1.28.10-gke.1058000` or later with Envoy enabled; otherwise GKE rejects the update and access stays unchanged. |
 | `allow_public_api_server` | `false` | Explicit opt-in to accept any Internet address. With an empty `authorized_networks` the module leaves master authorized networks unmanaged. |
 
-Ranges broader than `/8` (IPv4) or `/16` (IPv6), including `0.0.0.0/0` and
-`::/0`, are rejected unless `allow_public_api_server = true`. When master
+Rules for `authorized_networks`:
+
+- Entries must be IPv4 CIDR blocks, because the module creates an IPv4 cluster.
+- At most 100 entries, the GKE limit on authorized networks.
+- Together the entries may cover at most 16,777,216 addresses, the size of one
+  `/8`. `0.0.0.0/0`, split halves such as two `/1` blocks, and several broad
+  ranges are rejected unless `allow_public_api_server = true`.
+- Documentation ranges (`192.0.2.0/24`, `198.51.100.0/24`, `203.0.113.0/24`)
+  are rejected, so an unedited placeholder fails at plan time.
+
+In the public-endpoint mode the list does not restrict the private endpoint,
+which stays reachable from the cluster's VPC network in its region. When master
 authorized networks are managed, access from Google Cloud public IP addresses
 is disabled. Every request still needs Google authentication.
 
-**Upgrading from 0.x.** Earlier versions left the public endpoint open to any
-address when `authorized_networks` was empty. That configuration now fails the
-plan with a message asking you to choose. Configurations that already set
-`authorized_networks` keep working; the plan may show
-`gcp_public_cidrs_access_enabled = false` if it was enabled outside Terraform.
-To restrict an open cluster, set `authorized_networks`; the plan shows an
-in-place update that adds `master_authorized_networks_config`. To keep the
-previous behaviour explicitly, set `allow_public_api_server = true`; the plan
-shows no change to the endpoint. `enable_private_endpoint` is also an in-place
-update.
+This module installs nothing in the cluster, so if the list stops including
+your address, correct `authorized_networks` and apply again to restore access.
+
+**Upgrading from 0.x.**
+
+- Earlier versions left the public endpoint open to any address when
+  `authorized_networks` was empty. That configuration now fails the plan with a
+  message asking you to choose.
+- Configurations that already set `authorized_networks` keep working if the
+  entries are IPv4, not documentation ranges, at most 100, and no broader than
+  one `/8` in total (otherwise set `allow_public_api_server = true`). The plan
+  may show `gcp_public_cidrs_access_enabled = false` if it was enabled outside
+  Terraform.
+- To restrict an open cluster, set `authorized_networks`. The plan shows an
+  in-place update that adds `master_authorized_networks_config`.
+- To keep the previous behaviour explicitly, set
+  `allow_public_api_server = true`. The plan shows no change to the endpoint.
+- `enable_private_endpoint` is also an in-place update.
 
 ### Node Auto-Provisioning (NAP)
 
