@@ -159,7 +159,7 @@ variable "enable_private_endpoint" {
 }
 
 variable "allow_public_api_server" {
-  description = "Opt in to a public Kubernetes API endpoint that accepts any Internet address. With an empty authorized_networks the module leaves master authorized networks unmanaged, as earlier versions did, and authorized_networks may cover more than one /8 in total. Requests still need Google authentication."
+  description = "Opt in to a public Kubernetes API endpoint that accepts any Internet address. With an empty authorized_networks the module leaves master authorized networks unmanaged, as earlier versions did, and authorized_networks may cover more than one /8 in total. Requests still need Kubernetes API authentication and authorization."
   type        = bool
   default     = false
   nullable    = false

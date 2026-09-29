@@ -191,7 +191,8 @@ Rules for `authorized_networks`:
 In the public-endpoint mode the list does not restrict the private endpoint,
 which stays reachable from the cluster's VPC network in its region. When master
 authorized networks are managed, access from Google Cloud public IP addresses
-is disabled. Every request still needs Google authentication.
+is disabled. Network restrictions are in addition to Kubernetes API
+authentication and authorization, which every request must still pass.
 
 This module installs nothing in the cluster, so if the list stops including
 your address, correct `authorized_networks` and apply again to restore access.
@@ -205,7 +206,9 @@ your address, correct `authorized_networks` and apply again to restore access.
   entries are IPv4, not documentation ranges, at most 100, and no broader than
   one `/8` in total (otherwise set `allow_public_api_server = true`). The plan
   may show `gcp_public_cidrs_access_enabled = false` if it was enabled outside
-  Terraform.
+  Terraform. GKE documents that this change can take several hours to be
+  enforced, so verify the effective access before treating the endpoint as
+  restricted.
 - To restrict an open cluster, set `authorized_networks`. The plan shows an
   in-place update that adds `master_authorized_networks_config`.
 - To keep the previous behaviour explicitly, set
