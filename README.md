@@ -193,7 +193,9 @@ In the public-endpoint mode the list does not restrict the private endpoint,
 which stays reachable from the cluster's VPC network in its region. When master
 authorized networks are managed, access from Google Cloud public IP addresses
 is disabled. Network restrictions are in addition to Kubernetes API
-authentication and authorization, which every request must still pass.
+authentication and authorization. Apart from the unauthenticated health and
+version endpoints (such as `/healthz`, `/readyz`, and `/version`), every
+request must still pass them.
 
 This module installs nothing in the cluster, so if the list stops including
 your address, correct `authorized_networks` and apply again to restore access.
