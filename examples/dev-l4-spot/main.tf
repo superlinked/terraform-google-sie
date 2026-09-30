@@ -93,7 +93,8 @@ variable "api_server_authorized_ip_ranges" {
 # =============================================================================
 
 module "infra" {
-  source = "../.."
+  source  = "superlinked/sie/google"
+  version = "0.7.3" # x-release-please-version
 
   project_id               = var.project_id
   region                   = var.region

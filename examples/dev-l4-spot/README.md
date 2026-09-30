@@ -50,9 +50,9 @@ helm upgrade --install sie-cluster oci://ghcr.io/superlinked/charts/sie-cluster 
 ```
 
 Chart `0.8.3` selects `v0.8.3` service images and the
-`v0.8.3-cuda12-default` worker image. The example uses the module source from
-this checkout; the Terraform module is versioned independently of SIE. The
-cache arguments above also configure the chart's required payload-store bucket.
+`v0.8.3-cuda12-default` worker image. The example pins the Terraform module
+release from the Registry, which is versioned independently of SIE. The cache
+arguments above also configure the chart's required payload-store bucket.
 
 ## Variables
 
