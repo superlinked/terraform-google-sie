@@ -3,7 +3,7 @@
 # Creates a GKE cluster with GPU nodes. K8s resources (KEDA, Prometheus,
 # SIE application) are deployed via Helm after this terraform apply.
 #
-# Use chart 0.8.3 from oci://ghcr.io/superlinked/charts/sie-cluster.
+# Use chart 0.9.0 from oci://ghcr.io/superlinked/charts/sie-cluster.
 #
 # Features:
 #   - 1x L4 GPU spot pool (scale 0-5)
@@ -25,9 +25,9 @@
 # After apply, deploy K8s resources (batteries-included Helm chart):
 #   $(terraform output -raw kubectl_command)
 #   curl -fsSL -o values-gke.yaml \
-#     https://raw.githubusercontent.com/superlinked/sie/v0.8.3/deploy/helm/sie-cluster/values-gke.yaml
+#     https://raw.githubusercontent.com/superlinked/sie/v0.9.0/deploy/helm/sie-cluster/values-gke.yaml
 #   helm upgrade --install sie-cluster oci://ghcr.io/superlinked/charts/sie-cluster \
-#     --version 0.8.3 -f values-gke.yaml \
+#     --version 0.9.0 -f values-gke.yaml \
 #     --create-namespace -n sie \
 #     --set-string "serviceAccount.annotations.iam\\.gke\\.io/gcp-service-account=$(terraform output -raw sie_workload_service_account)" \
 #     $(terraform output -raw model_cache_helm_args)
