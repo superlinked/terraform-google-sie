@@ -31,10 +31,17 @@ Examples in `examples/` use the `infra/` submodule directly and deploy K8s resou
 ```bash
 cd examples/dev-l4-spot
 export TF_VAR_project_id="your-project-id"
+# CIDRs allowed to reach the Kubernetes API; include this machine's egress
+# address (for example the /32 of `curl -s https://checkip.amazonaws.com`).
+export TF_VAR_api_server_authorized_ip_ranges='["203.0.113.10/32"]'
 terraform init
 terraform plan
 terraform apply
 ```
+
+`203.0.113.10/32` is a documentation placeholder. The module rejects
+documentation ranges, so replace it with your own address. See
+[Kubernetes API access](#kubernetes-api-access) for the private-endpoint mode.
 
 After apply, configure kubectl and deploy SIE with chart `0.9.0`. The chart
 selects the published `v0.9.0` service images and `v0.9.0-cuda12-default`
@@ -137,6 +144,9 @@ This creates a service account with the minimum roles needed to deploy SIE infra
 | `project_id` | GCP project ID |
 | `region` | GCP region (e.g., `us-central1`, `europe-west4`) |
 
+You must also choose how the Kubernetes API is reached; see
+[Kubernetes API access](#kubernetes-api-access).
+
 ### Cluster
 
 | Variable | Default | Description |
@@ -199,7 +209,60 @@ pod requesting N GPUs onto a node that advertises N allocatable GPUs.
 | `services_cidr` | `10.2.0.0/20` | Secondary CIDR range for services |
 | `enable_private_nodes` | `true` | No public IPs on nodes (Cloud NAT for egress) |
 | `master_ipv4_cidr_block` | `172.16.0.0/28` | CIDR block for the master network |
-| `authorized_networks` | `[]` | CIDRs allowed to access the Kubernetes API |
+
+### Kubernetes API access
+
+The GKE control plane is never open to the whole Internet unless you ask for
+it. The plan fails until you choose one mode:
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `authorized_networks` | `[]` | CIDRs (with display names) allowed to reach the Kubernetes API through master authorized networks. Include every machine that runs `kubectl` or `helm` against the cluster. The list restricts the public endpoint, and also the private endpoint in private-endpoint mode. |
+| `enable_private_endpoint` | `false` | Disable the public endpoint and serve the API only on the private endpoint. Requires `enable_private_nodes`. The private endpoint is reachable from the cluster's VPC network in the cluster's region; this module does not enable access from other regions. A non-empty `authorized_networks` (for example a VPN range) is then also enforced on the private endpoint; with an empty list any address that reaches the private endpoint is admitted. Enforcement needs a control plane at GKE `1.28.10-gke.1058000` or later with Envoy enabled; otherwise GKE rejects the update and access stays unchanged. |
+| `allow_public_api_server` | `false` | Explicit opt-in to accept any Internet address. With an empty `authorized_networks` the module leaves master authorized networks unmanaged. |
+
+Rules for `authorized_networks`:
+
+- Entries must be IPv4 CIDR blocks, because the module creates an IPv4 cluster.
+- At most 100 entries, the GKE limit on authorized networks.
+- With the public endpoint enabled, the entries together may cover at most
+  16,777,216 addresses, the size of one `/8`. `0.0.0.0/0`, split halves such as
+  two `/1` blocks, and several broad ranges are rejected unless
+  `allow_public_api_server = true`. In private-endpoint mode the list holds
+  internal ranges (for example all three RFC 1918 ranges) and has no total
+  limit.
+- Entries inside a documentation range (`192.0.2.0/24`, `198.51.100.0/24`,
+  `203.0.113.0/24`) are rejected, so an unedited placeholder fails at plan
+  time. Broader entries that contain one need `allow_public_api_server = true`.
+
+In the public-endpoint mode the list does not restrict the private endpoint,
+which stays reachable from the cluster's VPC network in its region. When master
+authorized networks are managed, access from Google Cloud public IP addresses
+is disabled. Network restrictions are in addition to Kubernetes API
+authentication and authorization. Apart from the unauthenticated health and
+version endpoints (such as `/healthz`, `/readyz`, and `/version`), every
+request must still pass them.
+
+This module installs nothing in the cluster, so if the list stops including
+your address, correct `authorized_networks` and apply again to restore access.
+
+**Upgrading from 0.x.**
+
+- Earlier versions left the public endpoint open to any address when
+  `authorized_networks` was empty. That configuration now fails the plan with a
+  message asking you to choose.
+- Configurations that already set `authorized_networks` keep working if the
+  entries are IPv4, not documentation ranges, at most 100, and no broader than
+  one `/8` in total (otherwise set `allow_public_api_server = true`). The plan
+  may show `gcp_public_cidrs_access_enabled = false` if it was enabled outside
+  Terraform. GKE documents that this change can take several hours to be
+  enforced, so verify the effective access before treating the endpoint as
+  restricted.
+- To restrict an open cluster, set `authorized_networks`. The plan shows an
+  in-place update that adds `master_authorized_networks_config`.
+- To keep the previous behaviour explicitly, set
+  `allow_public_api_server = true`. The plan shows no change to the endpoint.
+- `enable_private_endpoint` is also an in-place update.
 
 ### Node Auto-Provisioning (NAP)
 
@@ -339,6 +402,7 @@ See `infra/gcs_model_cache.tf` and `infra/iam.tf` for the resource definitions a
 
 This module follows GCP security best practices out of the box:
 
+- **Restricted control plane** - the Kubernetes API accepts only `authorized_networks`, or only the private endpoint with `enable_private_endpoint`; any-address access needs `allow_public_api_server`
 - **Private nodes** - worker nodes have no public IPs; egress via Cloud NAT
 - **Shielded nodes** - Secure Boot and Integrity Monitoring on all node pools
 - **Workload Identity** - pods use GCP service accounts, no JSON key files

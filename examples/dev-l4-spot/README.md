@@ -6,7 +6,7 @@ Creates a minimal GKE cluster with a single L4 GPU spot node pool - ideal for de
 
 | Resource | Configuration |
 |----------|---------------|
-| GKE cluster | Private nodes, Cloud NAT, Workload Identity |
+| GKE cluster | Private nodes, Cloud NAT, Workload Identity, API endpoint restricted to `api_server_authorized_ip_ranges` |
 | GPU node pool | 1x NVIDIA L4 per node (g2-standard-8), spot VMs, scale 0-5 |
 | CPU node pool | e2-standard-4, scale 1-3 (system workloads) |
 | Artifact Registry | Docker repository for SIE images |
@@ -16,8 +16,15 @@ Creates a minimal GKE cluster with a single L4 GPU spot node pool - ideal for de
 
 ## Usage
 
+The Kubernetes API endpoint accepts only the CIDRs you list. Include the
+address the machine running kubectl and Helm uses to reach the Internet.
+`203.0.113.10/32` below is a documentation placeholder. The module rejects
+documentation ranges, so replace it with your own address.
+
 ```bash
 export TF_VAR_project_id="your-gcp-project-id"
+curl -s https://checkip.amazonaws.com   # your egress address; append /32
+export TF_VAR_api_server_authorized_ip_ranges='["203.0.113.10/32"]'
 
 terraform init
 terraform plan
@@ -43,9 +50,9 @@ helm upgrade --install sie-cluster oci://ghcr.io/superlinked/charts/sie-cluster 
 ```
 
 Chart `0.9.0` selects `v0.9.0` service images and the
-`v0.9.0-cuda12-default` worker image. The Terraform module remains independently
-versioned at `0.7.2`. The cache arguments above also configure the chart's
-required payload-store bucket.
+`v0.9.0-cuda12-default` worker image. The example pins the Terraform module
+release from the Registry, which is versioned independently of SIE. The cache
+arguments above also configure the chart's required payload-store bucket.
 
 Chart `0.9.0` has breaking changes for existing releases: NATS authentication
 is on by default, the GKE values file no longer enables the gateway Ingress,
@@ -63,6 +70,7 @@ README.
 | `cluster_name` | `sie-dev` | Cluster name |
 | `create_artifact_registry` | `true` | Create a Docker registry for SIE images |
 | `deployer_service_account` | `""` | Service account email (for CI/CD; optional for interactive use) |
+| `api_server_authorized_ip_ranges` | _(required)_ | CIDRs allowed to reach the Kubernetes API, such as `["203.0.113.10/32"]`; passed to the module's `authorized_networks` |
 
 ## Outputs
 

@@ -103,12 +103,69 @@ variable "master_ipv4_cidr_block" {
 }
 
 variable "authorized_networks" {
-  description = "CIDR blocks authorized to access the cluster master"
+  description = "IPv4 CIDR blocks authorized to reach the Kubernetes API (master authorized networks), at most 100. Include every machine that runs kubectl or helm against the cluster. The list applies to the public endpoint, and also to the private endpoint when enable_private_endpoint = true. Leave empty only with enable_private_endpoint = true or allow_public_api_server = true. With the public endpoint enabled, the ranges together may cover at most 16,777,216 addresses (one /8) unless allow_public_api_server = true; in private-endpoint mode the list holds internal ranges and has no total limit. Entries inside a documentation range (192.0.2.0/24, 198.51.100.0/24, 203.0.113.0/24) are rejected, and broader entries that contain one need allow_public_api_server = true."
   type = list(object({
     cidr_block   = string
     display_name = string
   }))
-  default = []
+  default  = []
+  nullable = false
+
+  validation {
+    condition     = alltrue([for network in var.authorized_networks : can(cidrhost(network.cidr_block, 0)) && !strcontains(network.cidr_block, ":")])
+    error_message = "Each authorized_networks[*].cidr_block must be an IPv4 CIDR block (an address with a prefix length, such as <egress-address>/32). The module creates an IPv4 cluster."
+  }
+
+  validation {
+    condition     = length(var.authorized_networks) <= 100
+    error_message = "authorized_networks accepts at most 100 entries, the GKE limit on authorized networks (https://cloud.google.com/kubernetes-engine/docs/how-to/latest/network-isolation)."
+  }
+
+  validation {
+    condition = alltrue([
+      for network in var.authorized_networks : !try(
+        (tonumber(split("/", network.cidr_block)[1]) >= 24 || !var.allow_public_api_server)
+        && anytrue([
+          for doc in ["192.0.2.0", "198.51.100.0", "203.0.113.0"] :
+          cidrhost("${cidrhost(network.cidr_block, 0)}/${min(tonumber(split("/", network.cidr_block)[1]), 24)}", 0) == cidrhost("${doc}/${min(tonumber(split("/", network.cidr_block)[1]), 24)}", 0)
+        ]),
+        false
+      )
+    ])
+    error_message = "authorized_networks overlaps a documentation range (192.0.2.0/24, 198.51.100.0/24, or 203.0.113.0/24), such as the README placeholder. Replace it with the real egress address of the machines that need API access. A broader range that contains a documentation range needs allow_public_api_server = true."
+  }
+
+  validation {
+    condition = var.allow_public_api_server || var.enable_private_endpoint || try(
+      sum(concat([0], [for network in var.authorized_networks : pow(2, 32 - tonumber(split("/", network.cidr_block)[1]))])) <= pow(2, 24),
+      false
+    )
+    error_message = "With the public endpoint enabled, authorized_networks covers more than 16,777,216 addresses (one /8) in total, for example 0.0.0.0/0 or several broad ranges. List the specific ranges that need API access, set enable_private_endpoint = true if the list holds internal ranges for the private endpoint, or set allow_public_api_server = true to accept any Internet address."
+  }
+
+  validation {
+    condition     = var.enable_private_endpoint || var.allow_public_api_server || length(var.authorized_networks) > 0
+    error_message = "Choose how the Kubernetes API is reached: set authorized_networks to the CIDRs that run kubectl and helm (for example your egress address as /32), set enable_private_endpoint = true to serve the API only inside the VPC, or set allow_public_api_server = true to accept any Internet address."
+  }
+}
+
+variable "enable_private_endpoint" {
+  description = "Serve the Kubernetes API only on the private endpoint and disable the public endpoint. Requires enable_private_nodes. The private endpoint is reachable from the cluster's VPC network in the cluster's region; this module does not enable access from other regions. kubectl and helm must run from such a network. A non-empty authorized_networks is then also enforced on the private endpoint, so list those internal ranges; with an empty list any address that reaches the private endpoint is admitted."
+  type        = bool
+  default     = false
+  nullable    = false
+
+  validation {
+    condition     = !var.enable_private_endpoint || var.enable_private_nodes
+    error_message = "enable_private_endpoint requires enable_private_nodes = true."
+  }
+}
+
+variable "allow_public_api_server" {
+  description = "Opt in to a public Kubernetes API endpoint that accepts any Internet address. With an empty authorized_networks the module leaves master authorized networks unmanaged, as earlier versions did, and authorized_networks may cover more than one /8 in total. Apart from the unauthenticated health and version endpoints (such as /healthz, /readyz and /version), requests still need Kubernetes API authentication and authorization."
+  type        = bool
+  default     = false
+  nullable    = false
 }
 
 # =============================================================================
