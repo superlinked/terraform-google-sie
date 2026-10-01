@@ -3,6 +3,10 @@
 # Run with: terraform -chdir=deploy/terraform/gcp/infra test
 # Requires Terraform >= 1.7.0
 
+variables {
+  authorized_networks = [{ cidr_block = "8.8.8.8/32", display_name = "test" }]
+}
+
 # =============================================================================
 # Variable Validation Tests (plan-only, no infrastructure)
 # =============================================================================
