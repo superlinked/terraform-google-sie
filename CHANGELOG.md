@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.1](https://github.com/superlinked/terraform-google-sie/compare/v1.0.0...v1.0.1) (2026-10-10)
+
+
+### Bug Fixes
+
+* pin GKE deployment examples to SIE 0.10.0 ([#9](https://github.com/superlinked/terraform-google-sie/issues/9)) ([6019635](https://github.com/superlinked/terraform-google-sie/commit/60196358c01c825e4cdda040aa5afd6789c1ec44))
+
 ## [1.0.0](https://github.com/superlinked/terraform-google-sie/compare/v0.7.3...v1.0.0) (2026-10-01)
 
 
