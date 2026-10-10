@@ -39,27 +39,28 @@ $(terraform output -raw kubectl_command)
 
 # Fetch the overlay from the same SIE release
 curl -fsSL -o values-gke.yaml \
-  https://raw.githubusercontent.com/superlinked/sie/v0.9.0/deploy/helm/sie-cluster/values-gke.yaml
+  https://raw.githubusercontent.com/superlinked/sie/v0.10.0/deploy/helm/sie-cluster/values-gke.yaml
 
 # Install SIE with its published service and CUDA 12 default worker images
 helm upgrade --install sie-cluster oci://ghcr.io/superlinked/charts/sie-cluster \
-  --version 0.9.0 -f values-gke.yaml \
+  --version 0.10.0 -f values-gke.yaml \
   --create-namespace -n sie \
   --set-string "serviceAccount.annotations.iam\\.gke\\.io/gcp-service-account=$(terraform output -raw sie_workload_service_account)" \
   $(terraform output -raw model_cache_helm_args)
 ```
 
-Chart `0.9.0` selects `v0.9.0` service images and the
-`v0.9.0-cuda12-default` worker image. The example pins the Terraform module
+Chart `0.10.0` selects `v0.10.0` service images and the
+`v0.10.0-cuda12-default` worker image. The example pins the Terraform module
 release from the Registry, which is versioned independently of SIE. The cache
 arguments above also configure the chart's required payload-store bucket.
 
-Chart `0.9.0` has breaking changes for existing releases: NATS authentication
-is on by default, the GKE values file no longer enables the gateway Ingress,
-and `helm upgrade --reuse-values` fails to render. Before upgrading a release
-installed from an earlier chart, follow
-[Upgrading to SIE 0.9.0](../../README.md#upgrading-to-sie-090) in the module
-README.
+Before upgrading a release installed from an earlier chart, follow
+[Upgrading to SIE 0.10.0](../../README.md#upgrading-to-sie-0100) in the module
+README. Chart `0.9.0` had breaking changes for existing releases: NATS
+authentication is on by default, the GKE values file no longer enables the
+gateway Ingress, and `helm upgrade --reuse-values` fails to render. A release
+older than `0.9.0` therefore also needs
+[Upgrading to SIE 0.9.0](../../README.md#upgrading-to-sie-090).
 
 ## Variables
 
