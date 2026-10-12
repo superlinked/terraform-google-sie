@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.0.2](https://github.com/superlinked/terraform-google-sie/compare/v1.0.1...v1.0.2) (2026-10-12)
+
+
+### Documentation
+
+* decouple SIE installation guides from module releases ([#11](https://github.com/superlinked/terraform-google-sie/issues/11)) ([64ffe29](https://github.com/superlinked/terraform-google-sie/commit/64ffe2939cbe792f67e67c321c254791f931917d))
+* simplify Helm installs to direct OCI ([8961004](https://github.com/superlinked/terraform-google-sie/commit/896100437a3059609140a82526d3f709fb7e4239))
+
 ## [1.0.1](https://github.com/superlinked/terraform-google-sie/compare/v1.0.0...v1.0.1) (2026-10-10)
 
 
