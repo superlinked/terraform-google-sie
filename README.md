@@ -412,7 +412,22 @@ install flow selects one chart and mirrors its images before deploying that
 same chart. For an upgrade, first follow [Upgrading SIE](#upgrading-sie) and add
 the reviewed `--version` to the pull. sie-config, the gateway, and the worker
 sidecars must run the same release. It requires `create_artifact_registry = true`
-or equivalent repository URLs from your own registry:
+or equivalent repository URLs from your own registry.
+
+The commands below use the module-managed registry outputs. With
+`create_artifact_registry = false`, those outputs are `null`. For your own
+registry, replace these expressions before running the commands:
+
+- `$(terraform output -raw artifact_registry_url | cut -d/ -f1)` with your registry hostname.
+- `$(terraform output -raw artifact_registry_server_repository_url)` with your full `sie-server` repository URL, without a tag.
+- `$(terraform output -raw artifact_registry_gateway_repository_url)` with your full `sie-gateway` repository URL, without a tag.
+- `$(terraform output -raw artifact_registry_config_repository_url)` with your full `sie-config` repository URL, without a tag.
+
+Make every replacement in both the Docker commands and the later Helm
+`workers.common.image.repository`, `gateway.image.repository`, and
+`config.image.repository` overrides. For a non-Google registry, replace
+`gcloud auth configure-docker` with that registry's authentication procedure.
+The managed Artifact Registry flow is:
 
 ```bash
 set -euo pipefail
