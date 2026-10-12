@@ -29,16 +29,10 @@
 # After apply, deploy K8s resources (batteries-included Helm chart):
 #   set -euo pipefail
 #   $(terraform output -raw kubectl_command)
-#   # Latest stable by default. For upgrades, follow ../../README.md#upgrading-sie
-#   # and add --version <reviewed-chart-version> to the pull after replacing it.
-#   SIE_CHART_DIR=$(mktemp -d)
-#   helm pull oci://ghcr.io/superlinked/charts/sie-cluster \
-#     --untar --untardir "$SIE_CHART_DIR"
-#   SIE_CHART="$SIE_CHART_DIR/sie-cluster"
-#   helm show chart "$SIE_CHART"
-#   # Keep this artifact and its version metadata for all rollout steps.
-#   helm upgrade --install sie-cluster "$SIE_CHART" \
-#     -f "$SIE_CHART/values-gke.yaml" \
+#   # Rolling latest chart / main values; see ../../README.md#upgrading-sie
+#   # for the optional pinned production upgrade.
+#   helm upgrade --install sie-cluster oci://ghcr.io/superlinked/charts/sie-cluster \
+#     -f https://raw.githubusercontent.com/superlinked/sie/main/deploy/helm/sie-cluster/values-gke.yaml \
 #     --create-namespace -n sie \
 #     --set-string "serviceAccount.annotations.iam\\.gke\\.io/gcp-service-account=$(terraform output -raw sie_workload_service_account)" \
 #     $(terraform output -raw model_cache_helm_args)

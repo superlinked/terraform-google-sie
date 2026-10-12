@@ -31,8 +31,8 @@ terraform plan
 terraform apply
 ```
 
-After apply, select the latest stable SIE chart once and deploy it with its
-bundled GKE values. The Terraform module release is independent of SIE:
+After apply, deploy the latest stable SIE chart directly with public `main`
+GKE values. The Terraform module release is independent of SIE:
 
 ```bash
 set -euo pipefail
@@ -40,29 +40,17 @@ set -euo pipefail
 # Configure kubectl
 $(terraform output -raw kubectl_command)
 
-# For a controlled upgrade, add --version <reviewed-chart-version> to this pull,
-# replacing the placeholder before running it.
-SIE_CHART_DIR=$(mktemp -d)
-helm pull oci://ghcr.io/superlinked/charts/sie-cluster \
-  --untar --untardir "$SIE_CHART_DIR"
-SIE_CHART="$SIE_CHART_DIR/sie-cluster"
-helm show chart "$SIE_CHART"
-
 # Install SIE with its published service and CUDA 12 default worker images
-helm upgrade --install sie-cluster "$SIE_CHART" \
-  -f "$SIE_CHART/values-gke.yaml" \
+helm upgrade --install sie-cluster oci://ghcr.io/superlinked/charts/sie-cluster \
+  -f https://raw.githubusercontent.com/superlinked/sie/main/deploy/helm/sie-cluster/values-gke.yaml \
   --create-namespace -n sie \
   --set-string "serviceAccount.annotations.iam\\.gke\\.io/gcp-service-account=$(terraform output -raw sie_workload_service_account)" \
   $(terraform output -raw model_cache_helm_args)
 ```
 
-Keep the selected chart directory and its displayed version metadata with your
-deployment record. The chart selects matching release image tags; its bundled
-README and values describe that selection. The cache arguments above also
-configure the chart's required payload-store bucket. For optional Artifact
-Registry mirroring, use the module README's
-[complete mirroring flow](../../README.md#pushing-images-to-artifact-registry)
-instead, which mirrors and installs from the same selected chart.
+The cache arguments above also configure the chart's required payload-store
+bucket. For optional Artifact Registry mirroring, use the module README's
+[mirroring flow](../../README.md#pushing-images-to-artifact-registry).
 
 Before upgrading a release installed from an earlier chart, follow
 [Upgrading SIE](../../README.md#upgrading-sie) in the module
