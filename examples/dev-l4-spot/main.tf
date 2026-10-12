@@ -3,7 +3,7 @@
 # Creates a GKE cluster with GPU nodes. K8s resources (KEDA, Prometheus,
 # SIE application) are deployed via Helm after this terraform apply.
 #
-# Use chart 0.10.0 from oci://ghcr.io/superlinked/charts/sie-cluster.
+# Select the SIE chart independently of the Terraform module version.
 #
 # Features:
 #   - 1x L4 GPU spot pool (scale 0-5)
@@ -27,11 +27,18 @@
 #   terraform apply
 #
 # After apply, deploy K8s resources (batteries-included Helm chart):
+#   set -euo pipefail
 #   $(terraform output -raw kubectl_command)
-#   curl -fsSL -o values-gke.yaml \
-#     https://raw.githubusercontent.com/superlinked/sie/v0.10.0/deploy/helm/sie-cluster/values-gke.yaml
-#   helm upgrade --install sie-cluster oci://ghcr.io/superlinked/charts/sie-cluster \
-#     --version 0.10.0 -f values-gke.yaml \
+#   # Latest stable by default. For upgrades, follow ../../README.md#upgrading-sie
+#   # and add --version <reviewed-chart-version> to the pull after replacing it.
+#   SIE_CHART_DIR=$(mktemp -d)
+#   helm pull oci://ghcr.io/superlinked/charts/sie-cluster \
+#     --untar --untardir "$SIE_CHART_DIR"
+#   SIE_CHART="$SIE_CHART_DIR/sie-cluster"
+#   helm show chart "$SIE_CHART"
+#   # Keep this artifact and its version metadata for all rollout steps.
+#   helm upgrade --install sie-cluster "$SIE_CHART" \
+#     -f "$SIE_CHART/values-gke.yaml" \
 #     --create-namespace -n sie \
 #     --set-string "serviceAccount.annotations.iam\\.gke\\.io/gcp-service-account=$(terraform output -raw sie_workload_service_account)" \
 #     $(terraform output -raw model_cache_helm_args)
