@@ -31,31 +31,41 @@ terraform plan
 terraform apply
 ```
 
-After apply, deploy SIE via Helm:
+After apply, select the latest stable SIE chart once and deploy it with its
+bundled GKE values. The Terraform module release is independent of SIE:
 
 ```bash
+set -euo pipefail
+
 # Configure kubectl
 $(terraform output -raw kubectl_command)
 
-# Fetch the overlay from the same SIE release
-curl -fsSL -o values-gke.yaml \
-  https://raw.githubusercontent.com/superlinked/sie/v0.10.0/deploy/helm/sie-cluster/values-gke.yaml
+# For a controlled upgrade, add --version <reviewed-chart-version> to this pull,
+# replacing the placeholder before running it.
+SIE_CHART_DIR=$(mktemp -d)
+helm pull oci://ghcr.io/superlinked/charts/sie-cluster \
+  --untar --untardir "$SIE_CHART_DIR"
+SIE_CHART="$SIE_CHART_DIR/sie-cluster"
+helm show chart "$SIE_CHART"
 
 # Install SIE with its published service and CUDA 12 default worker images
-helm upgrade --install sie-cluster oci://ghcr.io/superlinked/charts/sie-cluster \
-  --version 0.10.0 -f values-gke.yaml \
+helm upgrade --install sie-cluster "$SIE_CHART" \
+  -f "$SIE_CHART/values-gke.yaml" \
   --create-namespace -n sie \
   --set-string "serviceAccount.annotations.iam\\.gke\\.io/gcp-service-account=$(terraform output -raw sie_workload_service_account)" \
   $(terraform output -raw model_cache_helm_args)
 ```
 
-Chart `0.10.0` selects `v0.10.0` service images and the
-`v0.10.0-cuda12-default` worker image. The example pins the Terraform module
-release from the Registry, which is versioned independently of SIE. The cache
-arguments above also configure the chart's required payload-store bucket.
+Keep the selected chart directory and its displayed version metadata with your
+deployment record. The chart selects matching release image tags; its bundled
+README and values describe that selection. The cache arguments above also
+configure the chart's required payload-store bucket. For optional Artifact
+Registry mirroring, use the module README's
+[complete mirroring flow](../../README.md#pushing-images-to-artifact-registry)
+instead, which mirrors and installs from the same selected chart.
 
 Before upgrading a release installed from an earlier chart, follow
-[Upgrading to SIE 0.10.0](../../README.md#upgrading-to-sie-0100) in the module
+[Upgrading SIE](../../README.md#upgrading-sie) in the module
 README. Chart `0.9.0` had breaking changes for existing releases: NATS
 authentication is on by default, the GKE values file no longer enables the
 gateway Ingress, and `helm upgrade --reuse-values` fails to render. A release
